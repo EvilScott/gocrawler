@@ -1,47 +1,55 @@
 package main
 
 import (
-	"net/http"
-	"golang.org/x/net/html"
 	"fmt"
+	"golang.org/x/net/html"
+	"net/http"
+	"net/url"
 )
 
 const START_URL = "http://www.stedwards.edu/"
 
-func crawl(url string) []string {
-	var links []string
-	resp, _ := http.Get(url)
+func crawl(targetURL string) []string {
+	baseURL, _ := url.Parse(targetURL)
+	linkMap := NewURLSet()
+
+	// hit URL
+	resp, _ := http.Get(targetURL)
 	defer resp.Body.Close()
+
+	// walk elements
 	z := html.NewTokenizer(resp.Body)
-	tokenWalk := true
-	for tokenWalk {
-		tt := z.Next()
-		switch tt {
-		case html.StartTagToken:
-			tagName, hasAttr := z.TagName()
-			if hasAttr == true && string(tagName) == "a" {
-				attrWalk := true
-				for attrWalk {
-					name, value, more := z.TagAttr()
-					if string(name) == "href" {
-						fmt.Printf("Link found: %s\n", value)
-						links = append(links, string(value))
-					}
-					if more == false {
-						attrWalk = false
+	for tt := z.Next(); tt != html.ErrorToken; tt = z.Next() {
+		// skip anything that isn't a starting tag
+		if tt != html.StartTagToken {
+			continue
+		}
+
+		// walk element attrs
+		tagName, hasAttr := z.TagName()
+		if hasAttr == true && string(tagName) == "a" {
+			attrWalk := true
+			for attrWalk {
+				name, value, more := z.TagAttr()
+				if string(name) == "href" {
+					currentUrl, _ := url.Parse(string(value))
+					resolvedUrl := baseURL.ResolveReference(currentUrl)
+					if linkMap.Add(resolvedUrl.String()) {
+						fmt.Printf("Link found: %s\n", resolvedUrl)
 					}
 				}
+				if more == false {
+					attrWalk = false
+				}
 			}
-		case html.ErrorToken:
-			tokenWalk = false
 		}
 	}
-	return links
+	return linkMap.Slice()
 }
 
 func main() {
 	fmt.Println("Starting crawl...")
 	links := crawl(START_URL)
-	fmt.Printf("Links: %s", links)
+	fmt.Printf("Links: %s\n", links)
 	fmt.Println("Finished!")
 }
