@@ -5,17 +5,29 @@ import (
 	"golang.org/x/net/html"
 	"net/http"
 	"net/url"
+	"os"
 )
 
-const START_URL = "http://www.stedwards.edu/"
-
-func crawl(targetURL string) []string {
-	baseURL, _ := url.Parse(targetURL)
-	linkMap := NewURLSet()
+func crawl(scheme string, domain string, path string) []string {
+	// create url from domain and path
+	targetURL := fmt.Sprintf("%s://%s%s", scheme, domain, path)
+	baseURL, err := url.Parse(targetURL)
+	if err != nil {
+		fmt.Print(err.Error())
+		return []string{}
+	}
 
 	// hit URL
-	resp, _ := http.Get(targetURL)
+	fmt.Printf("Crawling %s ...", targetURL)
+	resp, err := http.Get(targetURL)
+	if err != nil {
+		fmt.Print(err.Error())
+		return []string{}
+	}
 	defer resp.Body.Close()
+
+	// keep track of urls on page
+	linkMap := NewURLSet()
 
 	// walk elements
 	z := html.NewTokenizer(resp.Body)
@@ -34,9 +46,10 @@ func crawl(targetURL string) []string {
 				if string(name) == "href" {
 					currentUrl, _ := url.Parse(string(value))
 					resolvedUrl := baseURL.ResolveReference(currentUrl)
-					if linkMap.Add(resolvedUrl.String()) {
-						fmt.Printf("Link found: %s\n", resolvedUrl)
+					if scheme == resolvedUrl.Scheme && domain == resolvedUrl.Hostname() {
+						linkMap.AddURL(resolvedUrl.Path)
 					}
+					attrWalk = false
 				}
 				if more == false {
 					attrWalk = false
@@ -48,8 +61,15 @@ func crawl(targetURL string) []string {
 }
 
 func main() {
-	fmt.Println("Starting crawl...")
-	links := crawl(START_URL)
-	fmt.Printf("Links: %s\n", links)
-	fmt.Println("Finished!")
+	startURL, err := url.Parse(os.Args[1])
+	if err != nil {
+		fmt.Print(err.Error())
+		os.Exit(1)
+	}
+	var visitedLinks []string
+	foundLinks := NewURLSet()
+	fmt.Print("Starting crawl ...\n")
+	foundLinks.AddURLs(crawl(startURL.Scheme, startURL.Hostname(), startURL.Path))
+	visitedLinks = append(visitedLinks, startURL.Path)
+	fmt.Printf("Finished! Links found:\n\n%s\n", foundLinks.String())
 }
