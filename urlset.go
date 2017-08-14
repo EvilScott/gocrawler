@@ -7,9 +7,9 @@ type URLSet struct {
 }
 
 func (set *URLSet) AddURL(url string) bool {
-	count, found := set.set[url]
+	count := set.set[url]
 	set.set[url] = count + 1
-	return !found
+	return count > 0
 }
 
 func (set *URLSet) AddURLs(urls []string) {
