@@ -1,15 +1,19 @@
-package main
+package crawl
 
 import (
 	"fmt"
-	"golang.org/x/net/html"
 	"net/http"
 	"net/url"
+	"sync"
+
+	"golang.org/x/net/html"
+
+	"github.com/evilscott/gocrawler/types"
 )
 
 func grabLinks(baseURL *url.URL, resp *http.Response) []string {
 	// keep track of urls on page
-	linkMap := NewURLSet()
+	linkMap := types.NewURLSet()
 
 	// walk elements
 	z := html.NewTokenizer(resp.Body)
@@ -42,8 +46,11 @@ func grabLinks(baseURL *url.URL, resp *http.Response) []string {
 	return linkMap.Slice()
 }
 
-func crawler(id int, scheme, domain string, todoURLs <-chan string, foundURLs chan<- string) {
+func Crawler(id int, scheme, domain string, todoURLs <-chan string, foundURLs chan<- string, wg sync.WaitGroup) {
 	for path := range todoURLs {
+		// signal that work is happening
+		wg.Add(1)
+
 		// create url from domain and path
 		targetURL := fmt.Sprintf("%s://%s%s", scheme, domain, path)
 		baseURL, err := url.Parse(targetURL)
@@ -65,7 +72,8 @@ func crawler(id int, scheme, domain string, todoURLs <-chan string, foundURLs ch
 			foundURLs <- found
 		}
 
-		// close response body
+		// close response body and signal work is done
 		resp.Body.Close()
+		wg.Done()
 	}
 }
