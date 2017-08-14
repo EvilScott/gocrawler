@@ -7,25 +7,7 @@ import (
 	"net/url"
 )
 
-// TODO refactor this into smaller functions
-func crawl(scheme string, domain string, path string) []string {
-	// create url from domain and path
-	targetURL := fmt.Sprintf("%s://%s%s", scheme, domain, path)
-	baseURL, err := url.Parse(targetURL)
-	if err != nil {
-		fmt.Print(err.Error())
-		return []string{}
-	}
-
-	// hit URL
-	fmt.Printf("Crawling %s ...\n", targetURL)
-	resp, err := http.Get(targetURL)
-	if err != nil {
-		fmt.Print(err.Error())
-		return []string{}
-	}
-	defer resp.Body.Close()
-
+func grabLinks(baseURL *url.URL, resp *http.Response) []string {
 	// keep track of urls on page
 	linkMap := NewURLSet()
 
@@ -46,7 +28,7 @@ func crawl(scheme string, domain string, path string) []string {
 				if string(name) == "href" {
 					currentUrl, _ := url.Parse(string(value))
 					resolvedUrl := baseURL.ResolveReference(currentUrl)
-					if scheme == resolvedUrl.Scheme && domain == resolvedUrl.Hostname() {
+					if baseURL.Scheme == resolvedUrl.Scheme && baseURL.Hostname() == resolvedUrl.Hostname() {
 						linkMap.AddURL(resolvedUrl.Path)
 					}
 					attrWalk = false
@@ -58,4 +40,32 @@ func crawl(scheme string, domain string, path string) []string {
 		}
 	}
 	return linkMap.Slice()
+}
+
+func crawler(id int, scheme, domain string, todoURLs <-chan string, foundURLs chan<- []string) {
+	for path := range todoURLs {
+		// create url from domain and path
+		targetURL := fmt.Sprintf("%s://%s%s", scheme, domain, path)
+		baseURL, err := url.Parse(targetURL)
+		if err != nil {
+			fmt.Println(err.Error())
+			foundURLs <- []string{}
+			continue
+		}
+
+		// hit URL
+		fmt.Printf("Crawler #%d crawling %s ...\n", id, targetURL)
+		resp, err := http.Get(targetURL)
+		if err != nil {
+			fmt.Println(err.Error())
+			foundURLs <- []string{}
+			continue
+		}
+
+		// grab links
+		foundURLs <- grabLinks(baseURL, resp)
+
+		// close response body
+		resp.Body.Close()
+	}
 }

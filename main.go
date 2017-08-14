@@ -14,32 +14,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	// variables
-	var link string
-	var newLinks []string
-	todoLinks := []string{startURL.Path}
-	visitedLinks := NewURLSet()
+	// url set
 	foundLinks := NewURLSet()
 
-	// main loop
+	// channels
+	todoURLs := make(chan string)
+	foundURLs := make(chan []string)
+
+	// crawler workers
+	// TODO configurable number of workers via args
+	for i := 1; i <= 3; i++ {
+		go crawler(i, startURL.Scheme, startURL.Hostname(), todoURLs, foundURLs)
+	}
+
+	// waiting on workers
 	fmt.Println("Starting crawl ...")
-	for len(todoLinks) > 0 {
-		// pop a link from the front of todos
-		link, todoLinks = todoLinks[0], todoLinks[1:]
-
-		// mark it as visited and crawl it
-		// TODO do this in a goroutine
-		newLinks = crawl(startURL.Scheme, startURL.Hostname(), link)
-		// TODO check here for successful crawl
-		visitedLinks.AddURL(link)
-
-		// record new links
-		foundLinks.AddURLs(newLinks)
-
-		// record unvisited links
-		for _, newLink := range newLinks {
-			if !visitedLinks.Contains(newLink) && !contains(newLink, todoLinks) {
-				todoLinks = append(todoLinks, newLink)
+	todoURLs <- startURL.Path
+	for founds := range foundURLs {
+		for _, found := range founds {
+			if !foundLinks.AddURL(found) {
+				todoURLs <- found
 			}
 		}
 	}
