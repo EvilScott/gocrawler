@@ -19,7 +19,7 @@ func main() {
 
 	// channels
 	todoURLs := make(chan string)
-	foundURLs := make(chan []string)
+	foundURLs := make(chan string)
 
 	// crawler workers
 	// TODO configurable number of workers via args
@@ -27,14 +27,12 @@ func main() {
 		go crawler(i, startURL.Scheme, startURL.Hostname(), todoURLs, foundURLs)
 	}
 
-	// waiting on workers
+	// listening for crawler results
 	fmt.Println("Starting crawl ...")
 	todoURLs <- startURL.Path
-	for founds := range foundURLs {
-		for _, found := range founds {
-			if !foundLinks.AddURL(found) {
-				todoURLs <- found
-			}
+	for found := range foundURLs {
+		if !foundLinks.AddURL(found) {
+			todoURLs <- found
 		}
 	}
 	fmt.Printf("Finished! Links found:%s\n", foundLinks.String())

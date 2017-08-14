@@ -42,14 +42,13 @@ func grabLinks(baseURL *url.URL, resp *http.Response) []string {
 	return linkMap.Slice()
 }
 
-func crawler(id int, scheme, domain string, todoURLs <-chan string, foundURLs chan<- []string) {
+func crawler(id int, scheme, domain string, todoURLs <-chan string, foundURLs chan<- string) {
 	for path := range todoURLs {
 		// create url from domain and path
 		targetURL := fmt.Sprintf("%s://%s%s", scheme, domain, path)
 		baseURL, err := url.Parse(targetURL)
 		if err != nil {
 			fmt.Println(err.Error())
-			foundURLs <- []string{}
 			continue
 		}
 
@@ -58,12 +57,13 @@ func crawler(id int, scheme, domain string, todoURLs <-chan string, foundURLs ch
 		resp, err := http.Get(targetURL)
 		if err != nil {
 			fmt.Println(err.Error())
-			foundURLs <- []string{}
 			continue
 		}
 
-		// grab links
-		foundURLs <- grabLinks(baseURL, resp)
+		// grab links and send them to channel
+		for _, found := range grabLinks(baseURL, resp) {
+			foundURLs <- found
+		}
 
 		// close response body
 		resp.Body.Close()
