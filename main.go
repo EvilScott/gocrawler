@@ -2,74 +2,46 @@ package main
 
 import (
 	"fmt"
-	"golang.org/x/net/html"
-	"net/http"
 	"net/url"
 	"os"
 )
 
-func crawl(scheme string, domain string, path string) []string {
-	// create url from domain and path
-	targetURL := fmt.Sprintf("%s://%s%s", scheme, domain, path)
-	baseURL, err := url.Parse(targetURL)
-	if err != nil {
-		fmt.Print(err.Error())
-		return []string{}
-	}
-
-	// hit URL
-	fmt.Printf("Crawling %s ...", targetURL)
-	resp, err := http.Get(targetURL)
-	if err != nil {
-		fmt.Print(err.Error())
-		return []string{}
-	}
-	defer resp.Body.Close()
-
-	// keep track of urls on page
-	linkMap := NewURLSet()
-
-	// walk elements
-	z := html.NewTokenizer(resp.Body)
-	for tt := z.Next(); tt != html.ErrorToken; tt = z.Next() {
-		// skip anything that isn't a starting tag
-		if tt != html.StartTagToken {
-			continue
-		}
-
-		// walk element attrs
-		tagName, hasAttr := z.TagName()
-		if hasAttr == true && string(tagName) == "a" {
-			attrWalk := true
-			for attrWalk {
-				name, value, more := z.TagAttr()
-				if string(name) == "href" {
-					currentUrl, _ := url.Parse(string(value))
-					resolvedUrl := baseURL.ResolveReference(currentUrl)
-					if scheme == resolvedUrl.Scheme && domain == resolvedUrl.Hostname() {
-						linkMap.AddURL(resolvedUrl.Path)
-					}
-					attrWalk = false
-				}
-				if more == false {
-					attrWalk = false
-				}
-			}
-		}
-	}
-	return linkMap.Slice()
-}
-
 func main() {
+	// parse initial url
 	startURL, err := url.Parse(os.Args[1])
 	if err != nil {
 		fmt.Print(err.Error())
 		os.Exit(1)
 	}
-	var visitedLinks []string
+
+	// variables
+	var link string
+	var newLinks []string
+	todoLinks := []string{startURL.Path}
+	visitedLinks := NewURLSet()
 	foundLinks := NewURLSet()
-	fmt.Print("Starting crawl ...\n")
-	foundLinks.AddURLs(crawl(startURL.Scheme, startURL.Hostname(), startURL.Path))
-	visitedLinks = append(visitedLinks, startURL.Path)
-	fmt.Printf("Finished! Links found:\n\n%s\n", foundLinks.String())
+
+	// main loop
+	fmt.Println("Starting crawl ...")
+	for len(todoLinks) > 0 {
+		// pop a link from the front of todos
+		link, todoLinks = todoLinks[0], todoLinks[1:]
+
+		// mark it as visited and crawl it
+		// TODO do this in a goroutine
+		newLinks = crawl(startURL.Scheme, startURL.Hostname(), link)
+		// TODO check here for successful crawl
+		visitedLinks.AddURL(link)
+
+		// record new links
+		foundLinks.AddURLs(newLinks)
+
+		// record unvisited links
+		for _, newLink := range newLinks {
+			if !visitedLinks.Contains(newLink) && !contains(newLink, todoLinks) {
+				todoLinks = append(todoLinks, newLink)
+			}
+		}
+	}
+	fmt.Printf("Finished! Links found:%s\n", foundLinks.String())
 }

@@ -27,6 +27,22 @@ func TestURLSet_AddURLs(t *testing.T) {
 	assert(t, 1, urlSet.set["bar"])
 }
 
+func TestURLSet_Contains(t *testing.T) {
+	urlSet := NewURLSet()
+	assert(t, false, urlSet.Contains("foo"))
+	urlSet.AddURL("foo")
+	assert(t, true, urlSet.Contains("foo"))
+}
+
+func TestURLSet_Length(t *testing.T) {
+	urlSet := NewURLSet()
+	urlSet.AddURL("foo")
+	assert(t,1, urlSet.Length())
+	urlSet.AddURL("foo")
+	urlSet.AddURL("bar")
+	assert(t,2, urlSet.Length())
+}
+
 func TestMain(m *testing.M) {
 	// call flag.Parse() here if TestMain uses flags
 	os.Exit(m.Run())

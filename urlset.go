@@ -18,6 +18,14 @@ func (set *URLSet) AddURLs(urls []string) {
 	}
 }
 
+func (set *URLSet) Contains(url string) bool {
+	return set.set[url] > 0
+}
+
+func (set *URLSet) Length() int {
+	return len(set.Slice())
+}
+
 func (set *URLSet) Slice() []string {
 	var links []string
 	for l := range set.set {
