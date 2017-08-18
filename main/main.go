@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/url"
 	"os"
@@ -10,8 +11,13 @@ import (
 )
 
 func main() {
+	// take worker count from args
+	var workers int
+	flag.IntVar(&workers, "workers", 3, "number of workers")
+	flag.Parse()
+
 	// parse initial url
-	start, err := url.Parse(os.Args[1])
+	start, err := url.Parse(flag.Arg(0))
 	if err != nil {
 		fmt.Print(err.Error())
 		os.Exit(1)
@@ -25,13 +31,12 @@ func main() {
 	found := make(chan string, 100)
 
 	// crawler workers
-	// TODO configurable number of workers via args
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= workers; i++ {
 		go crawl.Worker(i, start.Scheme, start.Hostname(), todos, found)
 	}
 
 	// listening for crawler results
-	fmt.Println("Starting crawl ...")
+	fmt.Printf("Starting crawl with %d workers ...\n", workers)
 	todos <- start.Path
 	results.AddURL(start.Path)
 

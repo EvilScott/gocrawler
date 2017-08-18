@@ -59,7 +59,7 @@ func Worker(id int, scheme, domain string, todos <-chan string, found chan<- str
 			}
 
 			// hit URL
-			fmt.Printf("Crawler #%d crawling %s ...\n", id, target)
+			fmt.Printf("Crawler #%d %s\n", id, target)
 			resp, err := http.Get(target)
 			if err != nil {
 				fmt.Println(err.Error())
