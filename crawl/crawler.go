@@ -46,7 +46,7 @@ func grabLinks(baseURL *url.URL, body io.ReadCloser) []string {
 	return linkMap.Slice()
 }
 
-func Crawler(id int, scheme, domain string, todos <-chan string, found chan<- string) {
+func Worker(id int, scheme, domain string, todos <-chan string, found chan<- string) {
 	for {
 		select {
 		case path := <- todos:

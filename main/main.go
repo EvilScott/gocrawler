@@ -21,13 +21,13 @@ func main() {
 	results := types.NewURLSet()
 
 	// channels
-	todos := make(chan string, 100)
+	todos := make(chan string, 1000)
 	found := make(chan string, 100)
 
 	// crawler workers
 	// TODO configurable number of workers via args
 	for i := 1; i <= 3; i++ {
-		go crawl.Crawler(i, start.Scheme, start.Hostname(), todos, found)
+		go crawl.Worker(i, start.Scheme, start.Hostname(), todos, found)
 	}
 
 	// listening for crawler results
