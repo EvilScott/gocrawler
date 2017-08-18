@@ -11,7 +11,7 @@ import (
     "github.com/evilscott/gocrawler/types"
 )
 
-func grabLinks(base *url.URL, body io.ReadCloser) []string {
+func GrabLinks(base *url.URL, body io.ReadCloser) []string {
     // keep track of urls on page
     links := types.NewURLSet()
 
@@ -67,7 +67,7 @@ func Worker(id int, scheme, domain string, todos <-chan string, found chan<- str
             }
 
             // grab links and send them to channel
-            for _, link := range grabLinks(base, resp.Body) {
+            for _, link := range GrabLinks(base, resp.Body) {
                 found <- link
             }
 

@@ -1,9 +1,18 @@
 package util
 
-import "testing"
+import (
+    "testing"
+    "reflect"
+)
 
-func Assert(t *testing.T, expected interface{}, given interface{}) {
+func AssertEquals(t *testing.T, expected, given interface{}) {
     if expected != given {
+        t.Errorf("Expected %v but got %v", expected, given)
+    }
+}
+
+func AssertEqualSlice(t *testing.T, expected, given []string) {
+    if !reflect.DeepEqual(expected, given) {
         t.Errorf("Expected %v but got %v", expected, given)
     }
 }
