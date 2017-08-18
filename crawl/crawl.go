@@ -5,6 +5,7 @@ import (
     "io"
     "net/http"
     "net/url"
+    "sync"
 
     "golang.org/x/net/html"
 
@@ -46,35 +47,32 @@ func GrabLinks(base *url.URL, body io.ReadCloser) []string {
     return links.Slice()
 }
 
-func Worker(id int, scheme, domain string, todos <-chan string, found chan<- string) {
-    for {
-        select {
-        case path := <-todos:
-            // create url from domain and path
-            target := fmt.Sprintf("%s://%s%s", scheme, domain, path)
-            base, err := url.Parse(target)
-            if err != nil {
-                fmt.Println(err.Error())
-                continue
-            }
+func Worker(id int, scheme, domain string, todos <-chan string, found chan<- []string, wg *sync.WaitGroup) {
+    for path := range todos {
+        // mark working
+        wg.Add(1)
 
-            // hit URL
-            fmt.Printf("Crawler #%d %s\n", id, target)
-            resp, err := http.Get(target)
-            if err != nil {
-                fmt.Println(err.Error())
-                continue
-            }
-
-            // grab links and send them to channel
-            for _, link := range GrabLinks(base, resp.Body) {
-                found <- link
-            }
-
-            // close response body and signal work is done
-            resp.Body.Close()
-
-        default: // noop
+        // create url from domain and path
+        target := fmt.Sprintf("%s://%s%s", scheme, domain, path)
+        base, err := url.Parse(target)
+        if err != nil {
+            fmt.Println(err.Error())
+            continue
         }
+
+        // hit URL
+        fmt.Printf("Crawler #%d %s\n", id, target)
+        resp, err := http.Get(target)
+        if err != nil {
+            fmt.Println(err.Error())
+            continue
+        }
+
+        // grab links and send them to channel
+        found <- GrabLinks(base, resp.Body)
+
+        // close response body and signal work is done
+        resp.Body.Close()
+        wg.Done()
     }
 }

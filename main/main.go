@@ -5,6 +5,8 @@ import (
     "fmt"
     "net/url"
     "os"
+    "sync"
+    "time"
 
     "github.com/evilscott/gocrawler/crawl"
     "github.com/evilscott/gocrawler/types"
@@ -28,11 +30,14 @@ func main() {
 
     // channels
     todos := make(chan string, 1000)
-    found := make(chan string, 100)
+    found := make(chan []string, workers)
+
+    // worker status
+    wg := sync.WaitGroup{}
 
     // crawler workers
     for i := 1; i <= workers; i++ {
-        go crawl.Worker(i, start.Scheme, start.Hostname(), todos, found)
+        go crawl.Worker(i, start.Scheme, start.Hostname(), todos, found, &wg)
     }
 
     // listening for crawler results
@@ -41,17 +46,20 @@ func main() {
     results.AddURL(start.Path)
 
     // main loop
-    for {
-        select {
-        case link := <-found:
-            if !results.AddURL(link) {
-                todos <- link
+    go func() {
+        for links := range found {
+            wg.Add(1)
+            for _, link := range links {
+                if !results.AddURL(link) {
+                    todos <- link
+                }
             }
-        default:
-            // TODO check for end condition
+            wg.Done()
         }
-    }
+    }()
 
     // wait for all workers to finish
+    time.Sleep(time.Second * 5)
+    wg.Wait()
     fmt.Printf("Finished! Links found:%s\n", results.String())
 }
