@@ -57,6 +57,7 @@ func Worker(id int, scheme, domain string, todos <-chan string, found chan<- []s
         base, err := url.Parse(target)
         if err != nil {
             fmt.Println(err.Error())
+            wg.Done()
             continue
         }
 
@@ -65,6 +66,7 @@ func Worker(id int, scheme, domain string, todos <-chan string, found chan<- []s
         resp, err := http.Get(target)
         if err != nil {
             fmt.Println(err.Error())
+            wg.Done()
             continue
         }
 
