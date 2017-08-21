@@ -47,7 +47,10 @@ func GrabLinks(base *url.URL, body io.ReadCloser) []string {
     return links.Slice()
 }
 
-func Worker(id int, scheme, domain string, todos <-chan string, found chan<- []string, wg *sync.WaitGroup) {
+func Worker(id int, scheme, domain, userAgent string, todos <-chan string, found chan<- []string, wg *sync.WaitGroup) {
+    // create reusable http client
+    client := &http.Client{}
+
     for path := range todos {
         // mark working
         wg.Add(1)
@@ -61,9 +64,18 @@ func Worker(id int, scheme, domain string, todos <-chan string, found chan<- []s
             continue
         }
 
+        // create request
+        req, err := http.NewRequest("GET", target, nil)
+        if err != nil {
+            fmt.Println(err.Error())
+            wg.Done()
+            continue
+        }
+        req.Header.Set("User-Agent", userAgent)
+
         // hit URL
         fmt.Printf("Crawler #%d %s\n", id, target)
-        resp, err := http.Get(target)
+        resp, err := client.Do(req)
         if err != nil {
             fmt.Println(err.Error())
             wg.Done()

@@ -15,7 +15,13 @@ import (
 func main() {
     // take worker count from args
     var workers int
-    flag.IntVar(&workers, "workers", 3, "number of workers")
+    flag.IntVar(&workers, "w", 3, "number of workers")
+
+    // take user-agent from args
+    var userAgent string
+    flag.StringVar(&userAgent, "ua", "gocrawler/1.0", "user agent string")
+
+    // parse args
     flag.Parse()
 
     // parse initial url
@@ -37,7 +43,7 @@ func main() {
 
     // crawler workers
     for i := 1; i <= workers; i++ {
-        go crawl.Worker(i, start.Scheme, start.Hostname(), todos, found, &wg)
+        go crawl.Worker(i, start.Scheme, start.Hostname(), userAgent, todos, found, &wg)
     }
 
     // listening for crawler results
