@@ -13,58 +13,58 @@ import (
 )
 
 func main() {
-    // take worker count from args
+    // Take Worker count from args.
     var workers int
     flag.IntVar(&workers, "w", 3, "number of workers")
 
-    // take user-agent from args
+    // Take User-Agent from args.
     var userAgent string
     flag.StringVar(&userAgent, "ua", "gocrawler/1.0", "user agent string")
 
-    // parse args
+    // Parse arguments.
     flag.Parse()
 
-    // parse initial url
-    start, err := url.Parse(flag.Arg(0))
+    // Parse base URL.
+    base, err := url.Parse(flag.Arg(0))
     if err != nil {
         fmt.Print(err.Error())
         os.Exit(1)
     }
 
-    // url set
-    results := types.NewURLSet()
+    // Keep track of results.
+    results := types.NewResultSet(*base)
 
-    // channels
+    // Create channels.
     todos := make(chan string, 1000)
     found := make(chan []string, workers)
 
-    // worker status
+    // Keep track of Worker status.
     wg := sync.WaitGroup{}
 
-    // crawler workers
+    // Create crawl Workers.
     for i := 1; i <= workers; i++ {
-        go crawl.Worker(i, start.Scheme, start.Hostname(), userAgent, todos, found, &wg)
+        go crawl.Worker(i, userAgent, todos, found, &wg)
     }
 
-    // listening for crawler results
+    // Start crawl with base URL.
     fmt.Printf("Starting crawl with %d workers ...\n", workers)
-    todos <- start.Path
-    results.AddURL(start.Path)
+    todos <- base.String()
 
-    // main loop
+    // Routine to process found URLs.
     go func() {
         for links := range found {
             wg.Add(1)
             for _, link := range links {
-                if !results.AddURL(link) {
-                    todos <- link
+                shouldCrawl, crawlURL := results.Add(link)
+                if shouldCrawl {
+                    todos <- crawlURL
                 }
             }
             wg.Done()
         }
     }()
 
-    // wait for all workers to finish
+    // Wait for all workers to finish.
     time.Sleep(time.Second * 5)
     wg.Wait()
     fmt.Printf("Finished! Links found:%s\n", results.String())

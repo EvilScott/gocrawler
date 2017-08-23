@@ -4,76 +4,68 @@ import (
     "fmt"
     "io"
     "net/http"
-    "net/url"
     "sync"
 
     "golang.org/x/net/html"
-
-    "github.com/evilscott/gocrawler/types"
 )
 
-func GrabLinks(base *url.URL, body io.ReadCloser) []string {
-    // keep track of urls on page
-    links := types.NewURLSet()
+// GrabLinks returns a slice of found links.
+func GrabLinks(body io.ReadCloser) []string {
+    // Keep track of found links.
+    var links []string
 
-    // walk elements
+    // Tokenize the body for walking.
     z := html.NewTokenizer(body)
+
+    // Walk page elements looking for links.
     for tt := z.Next(); tt != html.ErrorToken; tt = z.Next() {
-        // skip anything that isn't a starting tag
+        // Skip any tags that are not a starting tag.
         if tt != html.StartTagToken {
             continue
         }
 
-        // walk element attrs
+        // Walk element attributes looking for href.
         tag, attr := z.TagName()
         if attr == true && string(tag) == "a" {
             walk := true
             for walk {
                 name, value, more := z.TagAttr()
                 if string(name) == "href" {
-                    current, _ := url.Parse(string(value))
-                    resolved := base.ResolveReference(current)
-                    if base.Scheme == resolved.Scheme && base.Hostname() == resolved.Hostname() {
-                        links.AddURL(resolved.Path)
-                    }
+                    links = append(links, string(value))
                     walk = false
-                }
-                if more == false {
+                } else if more == false {
                     walk = false
                 }
             }
         }
     }
-    return links.Slice()
+
+    // Return slice of found links.
+    return links
 }
 
-func Worker(id int, scheme, domain, userAgent string, todos <-chan string, found chan<- []string, wg *sync.WaitGroup) {
-    // create reusable http client
-    client := &http.Client{}
+// Worker grabs URLs from a given channel and crawls them for links.
+func Worker(id int, userAgent string, todos <-chan string, found chan<- []string, wg *sync.WaitGroup) {
+    // Create reuseable HTTP client.
+    client := &http.Client{} //TODO add additional HTTP concerns here
 
-    for path := range todos {
-        // mark working
+    // Listen to todos channel.
+    for target := range todos {
+        // Notify WaitGroup that Worker is busy.
         wg.Add(1)
 
-        // create url from domain and path
-        target := fmt.Sprintf("%s://%s%s", scheme, domain, path)
-        base, err := url.Parse(target)
-        if err != nil {
-            fmt.Println(err.Error())
-            wg.Done()
-            continue
-        }
-
-        // create request
+        // Create request for target URL.
         req, err := http.NewRequest("GET", target, nil)
         if err != nil {
             fmt.Println(err.Error())
             wg.Done()
             continue
         }
+
+        // Set User-Agent for request.
         req.Header.Set("User-Agent", userAgent)
 
-        // hit URL
+        // Send the request.
         fmt.Printf("Crawler #%d %s\n", id, target)
         resp, err := client.Do(req)
         if err != nil {
@@ -82,10 +74,10 @@ func Worker(id int, scheme, domain, userAgent string, todos <-chan string, found
             continue
         }
 
-        // grab links and send them to channel
-        found <- GrabLinks(base, resp.Body)
+        // Grab links and send them to the found channel for processing.
+        found <- GrabLinks(resp.Body)
 
-        // close response body and signal work is done
+        // Close the response body and notify the WaitGroup that the Worker is not busy.
         resp.Body.Close()
         wg.Done()
     }

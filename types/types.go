@@ -2,67 +2,81 @@ package types
 
 import (
     "fmt"
+    "net/url"
     "sync"
 )
 
-type URLSet struct {
-    set map[string]int
+// Result handles info for a given link found during the crawl.
+type Result struct {
+    external bool
+    redirect bool
+    redirectedFrom url.URL
+    url url.URL
+}
+
+// ResultSet keeps track of found links during the crawl and associated data.
+type ResultSet struct {
+    base url.URL
+    set map[string][]Result
     m sync.RWMutex
 }
 
-func (set *URLSet) AddURL(url string) bool {
-    set.m.Lock()
-    defer set.m.Unlock()
-
-    count := set.set[url]
-    set.set[url] = count + 1
-    return count > 0
-}
-
-func (set *URLSet) AddURLs(urls []string) {
-    set.m.Lock()
-    for _, url := range urls {
-        set.AddURL(url)
+// NewResultSet creates a new ResultSet struct.
+func NewResultSet(base url.URL) ResultSet {
+    return ResultSet{
+        base: base,
+        set: make(map[string][]Result),
+        m: sync.RWMutex{},
     }
-    set.m.Unlock()
 }
 
-func (set *URLSet) Contains(url string) bool {
-    set.m.RLock()
-    defer set.m.RUnlock()
+// Add adds a new link to the ResultSet and returns if it should be crawled and the full URL
+func (rs ResultSet) Add(link string) (bool, string) {
+    // Utilize RWLock for safe map access.
+    rs.m.Lock()
+    defer rs.m.Unlock()
 
-    return set.set[url] > 0
-}
-
-func (set *URLSet) Length() int {
-    set.m.RLock()
-    defer set.m.RUnlock()
-
-    return len(set.Slice())
-}
-
-func (set *URLSet) Slice() []string {
-    set.m.RLock()
-    defer set.m.RUnlock()
-
-    var links []string
-    for l := range set.set {
-        links = append(links, l)
+    // Parse the new link and resolve it against the base URL.
+    parsed, err := url.Parse(string(link))
+    //TODO handle non-http/https
+    if err != nil {
+        return false, "" //TODO handle bad link here
     }
-    return links
+    resolved := rs.base.ResolveReference(parsed)
+
+    // Test if the added if link is internal or external.
+    external := true
+    key := resolved.String()
+    if rs.base.Scheme == resolved.Scheme && rs.base.Host == resolved.Host {
+        external = false
+        key = resolved.Path
+    }
+
+    // Test if the added link should be crawled or not.
+    found := len(rs.set[key]) == 0 && external == false
+
+    // Add the link to the ResultSet.
+    rs.set[key] = append(rs.set[key], Result{
+        external: external,
+        redirect: false,
+        redirectedFrom: url.URL{},
+        url: *resolved,
+    })
+
+    // Return whether the link is new or existing.
+    return found, fmt.Sprintf("%s://%s%s", resolved.Scheme, resolved.Host, resolved.Path)
 }
 
-func (set *URLSet) String() string {
-    set.m.RLock()
-    defer set.m.RUnlock()
+// String returns a string representation of the ResultSet.
+func (rs ResultSet) String() string {
+    rs.m.RLock()
+    defer rs.m.RUnlock()
 
+    // Iterate over ResultSet and build string representation.
+    //TODO make read/write locked
     var out string
-    for _, link := range set.Slice() {
-        out = fmt.Sprintf("%s\n%s :: %d", out, link, set.set[link])
+    for link := range rs.set {
+        out = fmt.Sprintf("%s\n%s", out, link)
     }
     return out
-}
-
-func NewURLSet() URLSet {
-    return URLSet{make(map[string]int), sync.RWMutex{}}
 }

@@ -1,39 +1,39 @@
 package types
 
 import (
+    "net/url"
     "testing"
 
     "github.com/evilscott/gocrawler/util"
 )
 
-func TestURLSet_AddURL(t *testing.T) {
-    urlSet := NewURLSet()
-    util.AssertEquals(t, false, urlSet.AddURL("foo"))
-    util.AssertEquals(t, true, urlSet.AddURL("foo"))
-    util.AssertEquals(t, false, urlSet.AddURL("bar"))
-    util.AssertEquals(t, 2, urlSet.set["foo"])
-    util.AssertEquals(t, 1, urlSet.set["bar"])
-}
+func TestResultSet_Add(t *testing.T) {
+    var shouldCrawl bool
+    var crawlURL string
 
-func TestURLSet_AddURLs(t *testing.T) {
-    urlSet := NewURLSet()
-    urlSet.AddURLs([]string{"foo", "foo", "bar"})
-    util.AssertEquals(t, 2, urlSet.set["foo"])
-    util.AssertEquals(t, 1, urlSet.set["bar"])
-}
+    base, _ := url.Parse("http://www.test.com/")
+    rs := NewResultSet(*base)
 
-func TestURLSet_Contains(t *testing.T) {
-    urlSet := NewURLSet()
-    util.AssertEquals(t, false, urlSet.Contains("foo"))
-    urlSet.AddURL("foo")
-    util.AssertEquals(t, true, urlSet.Contains("foo"))
-}
+    shouldCrawl, crawlURL = rs.Add("/foo")
+    util.AssertEquals(t, true, shouldCrawl)
+    util.AssertEquals(t, "http://www.test.com/foo", crawlURL)
 
-func TestURLSet_Length(t *testing.T) {
-    urlSet := NewURLSet()
-    urlSet.AddURL("foo")
-    util.AssertEquals(t, 1, urlSet.Length())
-    urlSet.AddURL("foo")
-    urlSet.AddURL("bar")
-    util.AssertEquals(t, 2, urlSet.Length())
+    shouldCrawl, crawlURL = rs.Add("/foo")
+    util.AssertEquals(t, false, shouldCrawl)
+    util.AssertEquals(t, "http://www.test.com/foo", crawlURL)
+
+    shouldCrawl, crawlURL = rs.Add("/bar")
+    util.AssertEquals(t, true, shouldCrawl)
+    util.AssertEquals(t, "http://www.test.com/bar", crawlURL)
+
+    shouldCrawl, crawlURL = rs.Add("https://otherdomain.com/baz")
+    util.AssertEquals(t, false, shouldCrawl)
+    util.AssertEquals(t, "https://otherdomain.com/baz", crawlURL)
+
+    shouldCrawl, crawlURL = rs.Add("https://www.test.com/bbq")
+    util.AssertEquals(t, false, shouldCrawl)
+    util.AssertEquals(t, "https://www.test.com/bbq", crawlURL)
+
+    util.AssertEquals(t, 2, len(rs.set["/foo"]))
+    util.AssertEquals(t, 1, len(rs.set["/bar"]))
 }
