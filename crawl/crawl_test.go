@@ -1,7 +1,6 @@
 package crawl
 
 import (
-    "io/ioutil"
     "strings"
     "testing"
 
@@ -23,7 +22,7 @@ func TestGrabLinks(t *testing.T) {
     </body>
     </html>
     `
-    body := ioutil.NopCloser(strings.NewReader(html))
+    body := strings.NewReader(html)
     expected := []string{"/yes", "#", "/", ""}
     util.AssertEqualSlice(t, expected, GrabLinks(body))
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // GrabLinks returns a slice of found links.
-func GrabLinks(body io.ReadCloser) []string {
+func GrabLinks(body io.Reader) []string {
     // Keep track of found links.
     var links []string
 
