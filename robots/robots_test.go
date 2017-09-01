@@ -36,7 +36,7 @@ func TestParse(t *testing.T) {
     util.AssertEqualSlice(t, []string{"/"}, fooEx.disallow)
     util.AssertEquals(t, 0, fooEx.crawlDelay)
 
-    bazEx := Parse("bazcrawler", strings.NewReader(txt))
+    bazEx := Parse("BaZcRaWlEr", strings.NewReader(txt))
     util.AssertEqualSlice(t, barEx.allow, bazEx.allow)
     util.AssertEqualSlice(t, barEx.disallow, bazEx.disallow)
     util.AssertEquals(t, barEx.crawlDelay, bazEx.crawlDelay)
@@ -45,6 +45,23 @@ func TestParse(t *testing.T) {
     util.AssertEqualSlice(t, []string{"/"}, otherEx.allow)
     util.AssertEqualSlice(t, []string{}, otherEx.disallow)
     util.AssertEquals(t, 0, otherEx.crawlDelay)
+}
+
+func TestExclusion_Blank(t *testing.T) {
+    blankEx := Exclusion{
+        allow: []string{},
+        disallow: []string{},
+        crawlDelay: 0,
+    }
+    util.AssertEquals(t, true, blankEx.Blank())
+
+    notBlankEx := Exclusion{
+        allow: []string{"foo"},
+        disallow: []string{"bar"},
+        crawlDelay: 3,
+    }
+    util.AssertEquals(t, false, notBlankEx.Blank())
+
 }
 
 func TestExclusion_Allowed(t *testing.T) {

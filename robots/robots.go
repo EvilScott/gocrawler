@@ -4,6 +4,7 @@ import (
     "io"
     "io/ioutil"
     "fmt"
+    "regexp"
     "strings"
 )
 
@@ -13,29 +14,73 @@ type Exclusion struct {
     crawlDelay int
 }
 
-// Parse processes a robots.txt input and outputs an Exclusion struct to guide the crawler for a given User-Agent
-func Parse(ua string, txt io.Reader) Exclusion {
+// parseSection parses a single section of robots.txt for use in Parse.
+func parseSection(section string) Exclusion {
     ex := Exclusion{}
-    body, err := ioutil.ReadAll(txt)
-    if err != nil {
-        fmt.Println(err.Error())
-        return ex
-    }
-    for _, line := range strings.Split(string(body), "\n") {
+    for _, line := range strings.Split(section, "\n") {
         switch {
-        case strings.Index(line, "User-agent:") == 0:
-            continue // TODO
         case strings.Index(line, "Disallow:") == 0:
-            continue // TODO
+            ex.disallow = append(ex.disallow, "") // TODO
         case strings.Index(line, "Allow:") == 0:
-            continue // TODO
+            ex.disallow = append(ex.allow, "") // TODO
         case strings.Index(line, "Crawl-delay:") == 0:
-            continue // TODO
-        default:
-            continue
+            ex.crawlDelay = 0 // TODO
         }
     }
-    return Exclusion{}
+    return ex
+}
+
+// Parse processes a robots.txt input and outputs an Exclusion struct to guide the crawler for a given User-Agent
+func Parse(ua string, txt io.Reader) Exclusion {
+    b, err := ioutil.ReadAll(txt)
+    if err != nil {
+        fmt.Println(err.Error())
+        return Exclusion{}
+    }
+    body := string(b)
+
+    // Remove comments.
+    re := regexp.MustCompile("#[^\n]+")
+    body = re.ReplaceAllLiteralString(body, "")
+
+    // Break apart User-agent sections.
+    re = regexp.MustCompile("((User-agent:[^\n]+\n)+)")
+    body = re.ReplaceAllString(body, "!!!\n$1")
+    sections := strings.Split(body, "!!!\n")
+
+    // Check for at least one User-agent section.
+    if len(sections) == 0 {
+        return Exclusion{}
+    } else {
+        sections = sections[1:]
+    }
+
+    // Case insensitive check for passed User-agent ua and fallback to *.
+    uaRegex, err := regexp.Compile(fmt.Sprintf("(?i)user-agent:\\s*%s\\s*$", ua))
+    if err != nil {
+        fmt.Println(err.Error())
+        return Exclusion{}
+    }
+    wildRegex := regexp.MustCompile("(?i)user-agent:\\s*\\*\\s*$")
+    var ex Exclusion
+    for _, section := range sections {
+        switch {
+        case uaRegex.FindString(section) != "":
+            ex = parseSection(section)
+        case wildRegex.FindString(section) != "":
+            if ex.Blank() {
+                ex = parseSection(section)
+            }
+        }
+    }
+
+    // Return our best matching Exclusion (or a blank one).
+    return ex
+}
+
+// Blank returns true if an Exclusion has no data in it.
+func (e Exclusion) Blank() bool {
+    return len(e.allow) == 0 && len(e.disallow) == 0 && e.crawlDelay == 0
 }
 
 // Allowed uses a robots Exclusion struct determine if a url is allowed to be crawled
