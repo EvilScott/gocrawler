@@ -6,6 +6,7 @@ import (
     "io"
     "net/http"
     "os"
+    "regexp"
     "strings"
     "sync"
     "time"
@@ -13,7 +14,6 @@ import (
     "github.com/evilscott/gocrawler/robots"
 
     "golang.org/x/net/html"
-    "regexp"
 )
 
 // Config keeps track of pertinent settings for the crawler.
@@ -112,6 +112,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sy
         req, err := http.NewRequest("GET", target, nil)
         if err != nil {
             fmt.Fprintln(os.Stderr, err.Error())
+            time.Sleep(time.Second * time.Duration(c.Exclusions.CrawlDelay))
             wg.Done()
             continue
         }
@@ -126,6 +127,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sy
         resp, err := client.Do(req)
         if err != nil {
             fmt.Fprintln(os.Stderr, err.Error())
+            time.Sleep(time.Second * time.Duration(c.Exclusions.CrawlDelay))
             wg.Done()
             continue
         }
