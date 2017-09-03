@@ -5,6 +5,7 @@ import (
     "io/ioutil"
     "fmt"
     "regexp"
+    "strconv"
     "strings"
 )
 
@@ -16,18 +17,36 @@ type Exclusion struct {
 
 // parseSection parses a single section of robots.txt for use in Parse.
 func parseSection(section string) Exclusion {
-    ex := Exclusion{}
-    for _, line := range strings.Split(section, "\n") {
-        switch {
-        case strings.Index(line, "Disallow:") == 0:
-            ex.disallow = append(ex.disallow, "") // TODO
-        case strings.Index(line, "Allow:") == 0:
-            ex.disallow = append(ex.allow, "") // TODO
-        case strings.Index(line, "Crawl-delay:") == 0:
-            ex.crawlDelay = 0 // TODO
-        }
+    var err error
+
+    allow := []string{}
+    allowMatch := regexp.MustCompile("Allow:\\s?(.+)\\s?").FindAllStringSubmatch(section, -1)
+    for _, match := range allowMatch {
+        allow = append(allow, match[1])
     }
-    return ex
+
+    disallow := []string{}
+    disallowMatch := regexp.MustCompile("Disallow:\\s?(.+)\\s?").FindAllStringSubmatch(section, -1)
+    for _, match := range disallowMatch {
+        disallow = append(disallow, match[1])
+    }
+
+    var crawlDelay int64
+    crawlDelayMatch := regexp.MustCompile("Crawl-delay:\\s?(\\d+)\\s?").FindStringSubmatch(section)
+    if len(crawlDelayMatch) == 2 {
+        crawlDelay, err = strconv.ParseInt(crawlDelayMatch[1], 10, 0)
+        if err != nil {
+            crawlDelay = 0
+        }
+    } else {
+        crawlDelay = 0
+    }
+
+    return Exclusion{
+        allow: allow,
+        disallow: disallow,
+        crawlDelay: int(crawlDelay),
+    }
 }
 
 // Parse processes a robots.txt input and outputs an Exclusion struct to guide the crawler for a given User-Agent
@@ -47,7 +66,6 @@ func Parse(ua string, txt io.Reader) Exclusion {
     re = regexp.MustCompile("((User-agent:[^\n]+\n)+)")
     body = re.ReplaceAllString(body, "!!!\n$1")
     sections := strings.Split(body, "!!!\n")
-
     // Check for at least one User-agent section.
     if len(sections) == 0 {
         return Exclusion{}
@@ -56,12 +74,12 @@ func Parse(ua string, txt io.Reader) Exclusion {
     }
 
     // Case insensitive check for passed User-agent ua and fallback to *.
-    uaRegex, err := regexp.Compile(fmt.Sprintf("(?i)user-agent:\\s*%s\\s*$", ua))
+    uaRegex, err := regexp.Compile(fmt.Sprintf("(?i)user-agent:\\s*%s\\s*", ua))
     if err != nil {
         fmt.Println(err.Error())
         return Exclusion{}
     }
-    wildRegex := regexp.MustCompile("(?i)user-agent:\\s*\\*\\s*$")
+    wildRegex := regexp.MustCompile("(?i)user-agent:\\s*\\*\\s*")
     var ex Exclusion
     for _, section := range sections {
         switch {

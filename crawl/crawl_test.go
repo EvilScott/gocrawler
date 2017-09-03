@@ -24,5 +24,5 @@ func TestGrabLinks(t *testing.T) {
     `
     body := strings.NewReader(html)
     expected := []string{"/yes", "#", "/", ""}
-    util.AssertEqualSlice(t, expected, GrabLinks(body))
+    util.AssertEqualSlice(t, expected, GrabLinks(body), "GrabLinks")
 }

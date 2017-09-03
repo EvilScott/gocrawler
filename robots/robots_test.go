@@ -8,43 +8,42 @@ import (
 )
 
 func TestParse(t *testing.T) {
-    var txt string = `
-    # ignore comment lines
-    User-agent: foocrawler # ignore inline comments
-    Disallow: /foo
-    Disallow: /bar
-    Allow: /foo/bar
-    Crawl-delay: 10
+    var txt string = `# ignore comment lines
+User-agent: foocrawler # ignore inline comments
+Disallow: /foo
+Disallow: /bar
+Allow: /foo/bar
+Crawl-delay: 10
 
-    User-agent: barcrawler
-    User-agent: bazcrawler
-    Disallow: /
-    Crawl-delay: invalid
+User-agent: barcrawler
+User-agent: bazcrawler
+Disallow: /
+Crawl-delay: invalid
 
-    User-agent: *
-    Allow: /
-    Disallow: /admin
-    `
+User-agent: *
+Allow: /
+Disallow: /admin
+`
 
     fooEx := Parse("foocrawler", strings.NewReader(txt))
-    util.AssertEqualSlice(t, []string{"/foo/bar"}, fooEx.allow)
-    util.AssertEqualSlice(t, []string{"/foo", "/bar"}, fooEx.disallow)
-    util.AssertEquals(t, 10, fooEx.crawlDelay)
+    util.AssertEqualSlice(t, []string{"/foo/bar"}, fooEx.allow, "Parse fooEx.allow")
+    util.AssertEqualSlice(t, []string{"/foo", "/bar"}, fooEx.disallow, "Parse fooEx.disallow")
+    util.AssertEquals(t, 10, fooEx.crawlDelay, "Parse fooEx.crawlDelay")
 
     barEx := Parse("barcrawler", strings.NewReader(txt))
-    util.AssertEqualSlice(t, []string{}, fooEx.allow)
-    util.AssertEqualSlice(t, []string{"/"}, fooEx.disallow)
-    util.AssertEquals(t, 0, fooEx.crawlDelay)
+    util.AssertEqualSlice(t, []string{},  barEx.allow, "Parse barEx.allow")
+    util.AssertEqualSlice(t, []string{"/"}, barEx.disallow, "Parse barEx.disallow")
+    util.AssertEquals(t, 0, barEx.crawlDelay, "Parse barEx.crawlDelay")
 
     bazEx := Parse("BaZcRaWlEr", strings.NewReader(txt))
-    util.AssertEqualSlice(t, barEx.allow, bazEx.allow)
-    util.AssertEqualSlice(t, barEx.disallow, bazEx.disallow)
-    util.AssertEquals(t, barEx.crawlDelay, bazEx.crawlDelay)
+    util.AssertEqualSlice(t, barEx.allow, bazEx.allow, "Parse bazEx.allow")
+    util.AssertEqualSlice(t, barEx.disallow, bazEx.disallow, "Parse bazEx.disallow")
+    util.AssertEquals(t, barEx.crawlDelay, bazEx.crawlDelay, "Parse bazEx.crawlDelay")
 
     otherEx := Parse("othercrawler", strings.NewReader(txt))
-    util.AssertEqualSlice(t, []string{"/"}, otherEx.allow)
-    util.AssertEqualSlice(t, []string{}, otherEx.disallow)
-    util.AssertEquals(t, 0, otherEx.crawlDelay)
+    util.AssertEqualSlice(t, []string{"/"}, otherEx.allow, "Parse otherEx.allow")
+    util.AssertEqualSlice(t, []string{"/admin"}, otherEx.disallow, "Parse otherEx.disallow")
+    util.AssertEquals(t, 0, otherEx.crawlDelay, "Parse otherEx.crawlDelay")
 }
 
 func TestExclusion_Blank(t *testing.T) {
@@ -53,14 +52,14 @@ func TestExclusion_Blank(t *testing.T) {
         disallow: []string{},
         crawlDelay: 0,
     }
-    util.AssertEquals(t, true, blankEx.Blank())
+    util.AssertEquals(t, true, blankEx.Blank(), "Blank")
 
     notBlankEx := Exclusion{
         allow: []string{"foo"},
         disallow: []string{"bar"},
         crawlDelay: 3,
     }
-    util.AssertEquals(t, false, notBlankEx.Blank())
+    util.AssertEquals(t, false, notBlankEx.Blank(), "Blank")
 
 }
 
@@ -70,11 +69,11 @@ func TestExclusion_Allowed(t *testing.T) {
         disallow: []string{"/foo", "/bar"},
         crawlDelay: 10,
     }
-    util.AssertEquals(t, true, ex.Allowed("/foo/bar"))
-    util.AssertEquals(t, false, ex.Allowed("/foo"))
-    util.AssertEquals(t, false, ex.Allowed("/bar"))
-    util.AssertEquals(t, true, ex.Allowed("/"))
-    util.AssertEquals(t, true, ex.Allowed("/foo/bar/baz"))
-    util.AssertEquals(t, true, ex.Allowed("/baz"))
-    util.AssertEquals(t, false, ex.Allowed("/foo/baz"))
+    util.AssertEquals(t, true, ex.Allowed("/foo/bar"), "Allowed")
+    util.AssertEquals(t, false, ex.Allowed("/foo"), "Allowed")
+    util.AssertEquals(t, false, ex.Allowed("/bar"), "Allowed")
+    util.AssertEquals(t, true, ex.Allowed("/"), "Allowed")
+    util.AssertEquals(t, true, ex.Allowed("/foo/bar/baz"), "Allowed")
+    util.AssertEquals(t, true, ex.Allowed("/baz"), "Allowed")
+    util.AssertEquals(t, false, ex.Allowed("/foo/baz"), "Allowed")
 }
