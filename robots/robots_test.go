@@ -21,7 +21,7 @@ Disallow: /
 Crawl-delay: invalid
 
 User-agent: *
-Allow: /
+Allow: *
 Disallow: /admin
 `
 
@@ -41,7 +41,7 @@ Disallow: /admin
     util.AssertEquals(t, barEx.crawlDelay, bazEx.crawlDelay, "Parse bazEx.crawlDelay")
 
     otherEx := Parse("othercrawler", strings.NewReader(txt))
-    util.AssertEqualSlice(t, []string{"/"}, otherEx.allow, "Parse otherEx.allow")
+    util.AssertEqualSlice(t, []string{"*"}, otherEx.allow, "Parse otherEx.allow")
     util.AssertEqualSlice(t, []string{"/admin"}, otherEx.disallow, "Parse otherEx.disallow")
     util.AssertEquals(t, 0, otherEx.crawlDelay, "Parse otherEx.crawlDelay")
 }
@@ -76,4 +76,20 @@ func TestExclusion_Allowed(t *testing.T) {
     util.AssertEquals(t, true, ex.Allowed("/foo/bar/baz"), "Allowed")
     util.AssertEquals(t, true, ex.Allowed("/baz"), "Allowed")
     util.AssertEquals(t, false, ex.Allowed("/foo/baz"), "Allowed")
+}
+
+func TestExclusion_AllowedWildcards(t *testing.T) {
+    ex := Exclusion{
+        allow: []string{"/allowed"},
+        disallow: []string{"*"},
+    }
+    util.AssertEquals(t, true, ex.Allowed("/allowed"), "AllowedWildcard")
+    util.AssertEquals(t, false, ex.Allowed("/not/allowed"), "AllowedWildcard")
+
+    ex = Exclusion{
+        allow: []string{"*"},
+        disallow: []string{"/disallowed"},
+    }
+    util.AssertEquals(t, true, ex.Allowed("/disallowed"), "AllowedWildcard")
+    util.AssertEquals(t, true, ex.Allowed("/allowed"), "AllowedWildcard")
 }

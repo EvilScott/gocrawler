@@ -104,12 +104,12 @@ func (e Exclusion) Blank() bool {
 // Allowed uses a robots Exclusion struct determine if a url is allowed to be crawled
 func (e Exclusion) Allowed(url string) bool {
     for _, allow := range e.allow {
-        if strings.Index(url, allow) == 0 {
+        if strings.Index(url, allow) == 0 || allow == "*"{
             return true
         }
     }
     for _, disallow := range e.disallow {
-        if strings.Index(url, disallow) == 0 {
+        if strings.Index(url, disallow) == 0 || disallow == "*" {
             return false
         }
     }
