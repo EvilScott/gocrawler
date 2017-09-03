@@ -34,11 +34,10 @@ func main() {
     }
 
     // Create exclusions from robots.txt file.
-    var ex robots.Exclusion
+    ex := robots.Exclusion{}
     res, err := http.Get(fmt.Sprintf("%s://%s/robots.txt", base.Scheme, base.Host))
-    ex = robots.Parse(userAgent, res.Body)
-    if err != nil {
-        ex = robots.Exclusion{}
+    if err == nil {
+        ex = robots.Parse(userAgent, res.Body)
     }
 
     // Keep track of results.
