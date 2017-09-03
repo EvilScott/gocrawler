@@ -27,6 +27,10 @@ func main() {
     var crawlDelay int
     flag.IntVar(&crawlDelay, "cd", 0, "crawl delay")
 
+    // Take RedirectCount from args.
+    var redirectCount int
+    flag.IntVar(&redirectCount, "r", 10, "redirect count")
+
     // Parse arguments.
     flag.Parse()
 
@@ -50,7 +54,7 @@ func main() {
     // Create common worker config.
     c := crawl.Config{}
     c.Exclusions = ex
-    c.RedirectCount = 10
+    c.RedirectCount = redirectCount
     c.UserAgent = userAgent
 
     // Keep track of results.
