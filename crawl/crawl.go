@@ -1,13 +1,23 @@
 package crawl
 
 import (
+    "errors"
     "fmt"
     "io"
     "net/http"
     "sync"
 
+    "github.com/evilscott/gocrawler/robots"
+
     "golang.org/x/net/html"
 )
+
+// Config keeps track of pertinent settings for the crawler.
+type Config struct {
+    Exclusions robots.Exclusion
+    RedirectCount int
+    UserAgent string
+}
 
 // GrabLinks returns a slice of found links.
 func GrabLinks(body io.Reader) []string {
@@ -45,9 +55,17 @@ func GrabLinks(body io.Reader) []string {
 }
 
 // Worker grabs URLs from a given channel and crawls them for links.
-func Worker(id int, userAgent string, todos <-chan string, found chan<- []string, wg *sync.WaitGroup) {
+func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sync.WaitGroup) {
     // Create reuseable HTTP client.
-    client := &http.Client{} //TODO add additional HTTP concerns here
+    client := &http.Client{}
+
+    // Handle redirects.
+    client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+        if len(via) >= c.RedirectCount {
+            return errors.New(fmt.Sprintf("stopped after %d redirects", c.RedirectCount))
+        }
+        return nil
+    }
 
     // Listen to todos channel.
     for target := range todos {
@@ -63,7 +81,7 @@ func Worker(id int, userAgent string, todos <-chan string, found chan<- []string
         }
 
         // Set User-Agent for request.
-        req.Header.Set("User-Agent", userAgent)
+        req.Header.Set("User-Agent", c.UserAgent)
 
         // Send the request.
         fmt.Printf("Crawler #%d %s\n", id, target)

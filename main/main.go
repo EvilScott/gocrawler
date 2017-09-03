@@ -40,6 +40,12 @@ func main() {
         ex = robots.Parse(userAgent, res.Body)
     }
 
+    // Create common worker config.
+    c := crawl.Config{}
+    c.Exclusions = ex
+    c.RedirectCount = 10
+    c.UserAgent = userAgent
+
     // Keep track of results.
     results := types.NewResultSet(*base, ex)
 
@@ -52,7 +58,7 @@ func main() {
 
     // Create crawl Workers.
     for i := 1; i <= workers; i++ {
-        go crawl.Worker(i, userAgent, todos, found, &wg)
+        go crawl.Worker(i, c, todos, found, &wg)
     }
 
     // Start crawl with base URL.
