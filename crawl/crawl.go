@@ -50,7 +50,8 @@ func GrabLinks(body io.Reader) []string {
                     metaName = string(value)
                 } else if string(name) == "contents" {
                     metaContent = string(value)
-                } else if more == false {
+                }
+                if more == false {
                     walk = false
                 }
             }
@@ -66,11 +67,17 @@ func GrabLinks(body io.Reader) []string {
         case attr == true && string(tag) == "a":
             walk := true
             for walk {
+                var link string
                 name, value, more := z.TagAttr()
                 if string(name) == "href" {
-                    links = append(links, string(value))
+                    link = string(value)
+                } else if string(name) == "rel" && string(value) == "nofollow" {
                     walk = false
-                } else if more == false {
+                }
+                if more == false {
+                    if link != "" {
+                        links = append(links, link)
+                    }
                     walk = false
                 }
             }

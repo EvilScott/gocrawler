@@ -17,13 +17,14 @@ func TestGrabLinks(t *testing.T) {
         <a href="/yes">yes</a>
         <a href="#">here</a>
         <a href="/">here</a>
-        <a href="">here</a>
         <a>no</a>
+        <a foo="bar">foo</a>
+        <a href="/nope" rel="nofollow">bar</a>
     </body>
     </html>
     `
     body := strings.NewReader(html)
-    expected := []string{"/yes", "#", "/", ""}
+    expected := []string{"/yes", "#", "/"}
     util.AssertEqualSlice(t, expected, GrabLinks(body), "GrabLinks")
 }
 
