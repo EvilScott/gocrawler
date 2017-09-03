@@ -7,6 +7,7 @@ import (
     "regexp"
     "strconv"
     "strings"
+    "os"
 )
 
 type Exclusion struct {
@@ -53,7 +54,7 @@ func parseSection(section string) Exclusion {
 func Parse(ua string, txt io.Reader) Exclusion {
     b, err := ioutil.ReadAll(txt)
     if err != nil {
-        fmt.Println(err.Error())
+        fmt.Fprintln(os.Stderr, err.Error())
         return Exclusion{}
     }
     body := string(b)
@@ -76,7 +77,7 @@ func Parse(ua string, txt io.Reader) Exclusion {
     // Case insensitive check for passed User-agent ua and fallback to *.
     uaRegex, err := regexp.Compile(fmt.Sprintf("(?i)user-agent:\\s*%s\\s*", ua))
     if err != nil {
-        fmt.Println(err.Error())
+        fmt.Fprintln(os.Stderr, err.Error())
         return Exclusion{}
     }
     wildRegex := regexp.MustCompile("(?i)user-agent:\\s*\\*\\s*")

@@ -31,13 +31,17 @@ func main() {
     var redirectCount int
     flag.IntVar(&redirectCount, "r", 10, "redirect count")
 
+    // Take QuietMode from args.
+    var quietMode bool
+    flag.BoolVar(&quietMode, "q", false, "quiet mode")
+
     // Parse arguments.
     flag.Parse()
 
     // Parse base URL.
     base, err := url.Parse(flag.Arg(0))
     if err != nil {
-        fmt.Print(err.Error())
+        fmt.Fprint(os.Stderr, err.Error())
         os.Exit(1)
     }
 
@@ -54,6 +58,7 @@ func main() {
     // Create common worker config.
     c := crawl.Config{}
     c.Exclusions = ex
+    c.QuietMode = quietMode
     c.RedirectCount = redirectCount
     c.UserAgent = userAgent
 
@@ -73,7 +78,9 @@ func main() {
     }
 
     // Start crawl with base URL.
-    fmt.Printf("Starting crawl with %d workers ...\n", workers)
+    if c.QuietMode == false {
+        fmt.Printf("Starting crawl with %d workers ...\n", workers)
+    }
     todos <- base.String()
 
     // Routine to process found URLs.
@@ -93,5 +100,8 @@ func main() {
     // Wait for all workers to finish.
     time.Sleep(time.Second * 5)
     wg.Wait()
-    fmt.Printf("Finished! Links found:%s\n", results.String())
+    if c.QuietMode == false {
+        fmt.Println("Finished! Links found:")
+    }
+    fmt.Println(results.String())
 }

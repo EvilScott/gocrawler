@@ -5,6 +5,7 @@ import (
     "fmt"
     "io"
     "net/http"
+    "os"
     "strings"
     "sync"
     "time"
@@ -18,6 +19,7 @@ import (
 // Config keeps track of pertinent settings for the crawler.
 type Config struct {
     Exclusions robots.Exclusion
+    QuietMode bool
     RedirectCount int
     UserAgent string
 }
@@ -109,7 +111,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sy
         // Create request for target URL.
         req, err := http.NewRequest("GET", target, nil)
         if err != nil {
-            fmt.Println(err.Error())
+            fmt.Fprintln(os.Stderr, err.Error())
             wg.Done()
             continue
         }
@@ -118,10 +120,12 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sy
         req.Header.Set("User-Agent", c.UserAgent)
 
         // Send the request.
-        fmt.Printf("Crawler #%d %s\n", id, target)
+        if c.QuietMode == false {
+            fmt.Printf("Crawler #%d %s\n", id, target)
+        }
         resp, err := client.Do(req)
         if err != nil {
-            fmt.Println(err.Error())
+            fmt.Fprintln(os.Stderr, err.Error())
             wg.Done()
             continue
         }
