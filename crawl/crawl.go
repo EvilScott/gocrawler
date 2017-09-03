@@ -6,6 +6,7 @@ import (
     "io"
     "net/http"
     "sync"
+    "time"
 
     "github.com/evilscott/gocrawler/robots"
 
@@ -98,5 +99,8 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sy
         // Close the response body and notify the WaitGroup that the Worker is not busy.
         resp.Body.Close()
         wg.Done()
+
+        // Throttle requests if specified by config.
+        time.Sleep(c.Exclusions.CrawlDelay * time.Second)
     }
 }

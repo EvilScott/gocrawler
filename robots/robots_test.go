@@ -26,38 +26,38 @@ Disallow: /admin
 `
 
     fooEx := Parse("foocrawler", strings.NewReader(txt))
-    util.AssertEqualSlice(t, []string{"/foo/bar"}, fooEx.allow, "Parse fooEx.allow")
-    util.AssertEqualSlice(t, []string{"/foo", "/bar"}, fooEx.disallow, "Parse fooEx.disallow")
-    util.AssertEquals(t, 10, fooEx.crawlDelay, "Parse fooEx.crawlDelay")
+    util.AssertEqualSlice(t, []string{"/foo/bar"}, fooEx.Allow, "Parse fooEx.Allow")
+    util.AssertEqualSlice(t, []string{"/foo", "/bar"}, fooEx.Disallow, "Parse fooEx.Disallow")
+    util.AssertEquals(t, 10, fooEx.CrawlDelay, "Parse fooEx.CrawlDelay")
 
     barEx := Parse("barcrawler", strings.NewReader(txt))
-    util.AssertEqualSlice(t, []string{},  barEx.allow, "Parse barEx.allow")
-    util.AssertEqualSlice(t, []string{"/"}, barEx.disallow, "Parse barEx.disallow")
-    util.AssertEquals(t, 0, barEx.crawlDelay, "Parse barEx.crawlDelay")
+    util.AssertEqualSlice(t, []string{},  barEx.Allow, "Parse barEx.Allow")
+    util.AssertEqualSlice(t, []string{"/"}, barEx.Disallow, "Parse barEx.Disallow")
+    util.AssertEquals(t, 0, barEx.CrawlDelay, "Parse barEx.CrawlDelay")
 
     bazEx := Parse("BaZcRaWlEr", strings.NewReader(txt))
-    util.AssertEqualSlice(t, barEx.allow, bazEx.allow, "Parse bazEx.allow")
-    util.AssertEqualSlice(t, barEx.disallow, bazEx.disallow, "Parse bazEx.disallow")
-    util.AssertEquals(t, barEx.crawlDelay, bazEx.crawlDelay, "Parse bazEx.crawlDelay")
+    util.AssertEqualSlice(t, barEx.Allow, bazEx.Allow, "Parse bazEx.Allow")
+    util.AssertEqualSlice(t, barEx.Disallow, bazEx.Disallow, "Parse bazEx.Disallow")
+    util.AssertEquals(t, barEx.CrawlDelay, bazEx.CrawlDelay, "Parse bazEx.CrawlDelay")
 
     otherEx := Parse("othercrawler", strings.NewReader(txt))
-    util.AssertEqualSlice(t, []string{"*"}, otherEx.allow, "Parse otherEx.allow")
-    util.AssertEqualSlice(t, []string{"/admin"}, otherEx.disallow, "Parse otherEx.disallow")
-    util.AssertEquals(t, 0, otherEx.crawlDelay, "Parse otherEx.crawlDelay")
+    util.AssertEqualSlice(t, []string{"*"}, otherEx.Allow, "Parse otherEx.Allow")
+    util.AssertEqualSlice(t, []string{"/admin"}, otherEx.Disallow, "Parse otherEx.Disallow")
+    util.AssertEquals(t, 0, otherEx.CrawlDelay, "Parse otherEx.CrawlDelay")
 }
 
 func TestExclusion_Blank(t *testing.T) {
     blankEx := Exclusion{
-        allow: []string{},
-        disallow: []string{},
-        crawlDelay: 0,
+        Allow: []string{},
+        Disallow: []string{},
+        CrawlDelay: 0,
     }
     util.AssertEquals(t, true, blankEx.Blank(), "Blank")
 
     notBlankEx := Exclusion{
-        allow: []string{"foo"},
-        disallow: []string{"bar"},
-        crawlDelay: 3,
+        Allow: []string{"foo"},
+        Disallow: []string{"bar"},
+        CrawlDelay: 3,
     }
     util.AssertEquals(t, false, notBlankEx.Blank(), "Blank")
 
@@ -65,9 +65,9 @@ func TestExclusion_Blank(t *testing.T) {
 
 func TestExclusion_Allowed(t *testing.T) {
     ex := Exclusion{
-        allow: []string{"/foo/bar"},
-        disallow: []string{"/foo", "/bar"},
-        crawlDelay: 10,
+        Allow: []string{"/foo/bar"},
+        Disallow: []string{"/foo", "/bar"},
+        CrawlDelay: 10,
     }
     util.AssertEquals(t, true, ex.Allowed("/foo/bar"), "Allowed")
     util.AssertEquals(t, false, ex.Allowed("/foo"), "Allowed")
@@ -80,16 +80,16 @@ func TestExclusion_Allowed(t *testing.T) {
 
 func TestExclusion_AllowedWildcards(t *testing.T) {
     ex := Exclusion{
-        allow: []string{"/allowed"},
-        disallow: []string{"*"},
+        Allow: []string{"/allowed"},
+        Disallow: []string{"*"},
     }
     util.AssertEquals(t, true, ex.Allowed("/allowed"), "AllowedWildcard")
     util.AssertEquals(t, false, ex.Allowed("/not/allowed"), "AllowedWildcard")
 
     ex = Exclusion{
-        allow: []string{"*"},
-        disallow: []string{"/disallowed"},
+        Allow: []string{"*"},
+        Disallow: []string{"/Disallowed"},
     }
-    util.AssertEquals(t, true, ex.Allowed("/disallowed"), "AllowedWildcard")
+    util.AssertEquals(t, true, ex.Allowed("/Disallowed"), "AllowedWildcard")
     util.AssertEquals(t, true, ex.Allowed("/allowed"), "AllowedWildcard")
 }

@@ -10,9 +10,9 @@ import (
 )
 
 type Exclusion struct {
-    allow []string
-    disallow []string
-    crawlDelay int
+    Allow []string
+    Disallow []string
+    CrawlDelay int
 }
 
 // parseSection parses a single section of robots.txt for use in Parse.
@@ -43,9 +43,9 @@ func parseSection(section string) Exclusion {
     }
 
     return Exclusion{
-        allow: allow,
-        disallow: disallow,
-        crawlDelay: int(crawlDelay),
+        Allow: allow,
+        Disallow: disallow,
+        CrawlDelay: int(crawlDelay),
     }
 }
 
@@ -98,17 +98,17 @@ func Parse(ua string, txt io.Reader) Exclusion {
 
 // Blank returns true if an Exclusion has no data in it.
 func (e Exclusion) Blank() bool {
-    return len(e.allow) == 0 && len(e.disallow) == 0 && e.crawlDelay == 0
+    return len(e.Allow) == 0 && len(e.Disallow) == 0 && e.CrawlDelay == 0
 }
 
 // Allowed uses a robots Exclusion struct determine if a url is allowed to be crawled
 func (e Exclusion) Allowed(url string) bool {
-    for _, allow := range e.allow {
+    for _, allow := range e.Allow {
         if strings.Index(url, allow) == 0 || allow == "*"{
             return true
         }
     }
-    for _, disallow := range e.disallow {
+    for _, disallow := range e.Disallow {
         if strings.Index(url, disallow) == 0 || disallow == "*" {
             return false
         }

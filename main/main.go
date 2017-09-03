@@ -23,6 +23,10 @@ func main() {
     var userAgent string
     flag.StringVar(&userAgent, "ua", "gocrawler/1.0", "user agent string")
 
+    // Take CrawlDelay from args (overridden by higher value in robots.txt).
+    var crawlDelay int
+    flag.IntVar(&crawlDelay, "cd", 0, "crawl delay")
+
     // Parse arguments.
     flag.Parse()
 
@@ -38,6 +42,9 @@ func main() {
     res, err := http.Get(fmt.Sprintf("%s://%s/robots.txt", base.Scheme, base.Host))
     if err == nil {
         ex = robots.Parse(userAgent, res.Body)
+    }
+    if crawlDelay > ex.CrawlDelay {
+        ex.CrawlDelay = crawlDelay
     }
 
     // Create common worker config.
