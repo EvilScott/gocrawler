@@ -4,6 +4,8 @@ import (
     "fmt"
     "net/url"
     "sync"
+
+    "github.com/evilscott/gocrawler/robots"
 )
 
 // Result handles info for a given link found during the crawl.
@@ -19,14 +21,16 @@ type ResultSet struct {
     base url.URL
     set map[string][]Result
     m sync.RWMutex
+    ex robots.Exclusion
 }
 
 // NewResultSet creates a new ResultSet struct.
-func NewResultSet(base url.URL) ResultSet {
+func NewResultSet(base url.URL, ex robots.Exclusion) ResultSet {
     return ResultSet{
         base: base,
         set: make(map[string][]Result),
         m: sync.RWMutex{},
+        ex: ex,
     }
 }
 
@@ -38,9 +42,8 @@ func (rs ResultSet) Add(link string) (bool, string) {
 
     // Parse the new link and resolve it against the base URL.
     parsed, err := url.Parse(string(link))
-    //TODO handle non-http/https
     if err != nil {
-        return false, "" //TODO handle bad link here
+        return false, link
     }
     resolved := rs.base.ResolveReference(parsed)
 
@@ -53,7 +56,7 @@ func (rs ResultSet) Add(link string) (bool, string) {
     }
 
     // Test if the added link should be crawled or not.
-    found := len(rs.set[key]) == 0 && external == false
+    found := len(rs.set[key]) == 0 && external == false && rs.ex.Allowed(resolved.Path)
 
     // Add the link to the ResultSet.
     rs.set[key] = append(rs.set[key], Result{
@@ -63,17 +66,16 @@ func (rs ResultSet) Add(link string) (bool, string) {
         url: *resolved,
     })
 
-    // Return whether the link is new or existing.
+    // Return whether whether it should be crawled and the link itself.
     return found, fmt.Sprintf("%s://%s%s", resolved.Scheme, resolved.Host, resolved.Path)
 }
 
 // String returns a string representation of the ResultSet.
 func (rs ResultSet) String() string {
-    rs.m.RLock()
-    defer rs.m.RUnlock()
+    rs.m.Lock()
+    defer rs.m.Unlock()
 
     // Iterate over ResultSet and build string representation.
-    //TODO make read/write locked
     var out string
     for link := range rs.set {
         out = fmt.Sprintf("%s\n%s", out, link)

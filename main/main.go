@@ -3,12 +3,14 @@ package main
 import (
     "flag"
     "fmt"
+    "net/http"
     "net/url"
     "os"
     "sync"
     "time"
 
     "github.com/evilscott/gocrawler/crawl"
+    "github.com/evilscott/gocrawler/robots"
     "github.com/evilscott/gocrawler/types"
 )
 
@@ -31,8 +33,16 @@ func main() {
         os.Exit(1)
     }
 
+    // Create exclusions from robots.txt file.
+    var ex robots.Exclusion
+    res, err := http.Get(fmt.Sprintf("%s://%s/robots.txt", base.Scheme, base.Host))
+    ex = robots.Parse(userAgent, res.Body)
+    if err != nil {
+        ex = robots.Exclusion{}
+    }
+
     // Keep track of results.
-    results := types.NewResultSet(*base)
+    results := types.NewResultSet(*base, ex)
 
     // Create channels.
     todos := make(chan string, 1000)
