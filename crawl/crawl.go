@@ -96,11 +96,11 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sy
         // Grab links and send them to the found channel for processing.
         found <- GrabLinks(resp.Body)
 
+        // Throttle requests if specified by config.
+        time.Sleep(time.Second * time.Duration(c.Exclusions.CrawlDelay))
+
         // Close the response body and notify the WaitGroup that the Worker is not busy.
         resp.Body.Close()
         wg.Done()
-
-        // Throttle requests if specified by config.
-        time.Sleep(c.Exclusions.CrawlDelay * time.Second)
     }
 }
