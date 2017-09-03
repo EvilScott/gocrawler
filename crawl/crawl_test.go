@@ -26,3 +26,20 @@ func TestGrabLinks(t *testing.T) {
     expected := []string{"/yes", "#", "/", ""}
     util.AssertEqualSlice(t, expected, GrabLinks(body), "GrabLinks")
 }
+
+func TestGrabLinksMeta(t *testing.T) {
+    html := `
+    <html>
+    <head>
+        <meta name="robots" contents="noindex, nofollow" />
+    </head>
+    <body>
+        <a href="/foo">foo</a>
+        <a href="/bar">bar</a>
+        <a href="/baz">baz</a>
+    </body>
+    </html>
+    `
+    body := strings.NewReader(html)
+    util.AssertEqualSlice(t, []string{}, GrabLinks(body), "GrabLinksMeta")
+}

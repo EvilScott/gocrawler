@@ -5,12 +5,14 @@ import (
     "fmt"
     "io"
     "net/http"
+    "strings"
     "sync"
     "time"
 
     "github.com/evilscott/gocrawler/robots"
 
     "golang.org/x/net/html"
+    "regexp"
 )
 
 // Config keeps track of pertinent settings for the crawler.
@@ -31,13 +33,37 @@ func GrabLinks(body io.Reader) []string {
     // Walk page elements looking for links.
     for tt := z.Next(); tt != html.ErrorToken; tt = z.Next() {
         // Skip any tags that are not a starting tag.
-        if tt != html.StartTagToken {
+        if tt != html.StartTagToken && tt != html.SelfClosingTagToken {
             continue
         }
 
         // Walk element attributes looking for href.
         tag, attr := z.TagName()
-        if attr == true && string(tag) == "a" {
+        switch {
+        // Skip crawling pages with meta robots.
+        case attr == true && string(tag) == "meta":
+            var metaName, metaContent string
+            walk := true
+            for walk {
+                name, value, more := z.TagAttr()
+                if string(name) == "name" {
+                    metaName = string(value)
+                } else if string(name) == "contents" {
+                    metaContent = string(value)
+                } else if more == false {
+                    walk = false
+                }
+            }
+            if strings.ToLower(metaName) == "robots" {
+                re := regexp.MustCompile(",\\s?")
+                for _, content := range re.Split(metaContent, -1) {
+                    if content == "nofollow" {
+                        return []string{}
+                    }
+                }
+            }
+        // Record all links.
+        case attr == true && string(tag) == "a":
             walk := true
             for walk {
                 name, value, more := z.TagAttr()
