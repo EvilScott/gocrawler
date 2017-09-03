@@ -4,15 +4,17 @@ import (
     "net/url"
     "testing"
 
+    "github.com/evilscott/gocrawler/robots"
     "github.com/evilscott/gocrawler/util"
 )
 
 func TestResultSet_Add(t *testing.T) {
     var shouldCrawl bool
     var crawlURL string
+    ex := robots.Exclusion{}
 
     base, _ := url.Parse("http://www.test.com/")
-    rs := NewResultSet(*base)
+    rs := NewResultSet(*base, ex)
 
     shouldCrawl, crawlURL = rs.Add("/foo")
     util.AssertEquals(t, true, shouldCrawl, "")
