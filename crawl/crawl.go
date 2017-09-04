@@ -132,6 +132,11 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sy
             continue
         }
 
+        // Handle non 2xx/3xx responses.
+        if resp.StatusCode >= 400 {
+            fmt.Fprintf(os.Stderr, "%s :: %s", target, resp.Status)
+        }
+
         // Grab links and send them to the found channel for processing.
         found <- GrabLinks(resp.Body)
 
