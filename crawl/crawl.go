@@ -22,6 +22,7 @@ type Config struct {
     QuietMode bool
     RedirectCount int
     UserAgent string
+    VerboseMode bool
 }
 
 // GrabLinks returns a slice of found links.
@@ -130,6 +131,9 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
             time.Sleep(time.Second * time.Duration(c.Exclusions.CrawlDelay))
             wg.Done()
             continue
+        }
+        if c.VerboseMode == true {
+            fmt.Printf("Crawler #%d %s :: %s\n", id, target, resp.Status)
         }
 
         // Handle non 2xx/3xx responses.

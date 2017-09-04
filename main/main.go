@@ -35,6 +35,15 @@ func main() {
     var quietMode bool
     flag.BoolVar(&quietMode, "q", false, "quiet mode")
 
+    // Take VerboseMode from args.
+    var verboseMode bool
+    flag.BoolVar(&verboseMode, "v", false, "verbose mode")
+
+    // Verbose mode overrides Quiet mode.
+    if verboseMode && quietMode {
+        quietMode = false
+    }
+
     // Parse arguments.
     flag.Parse()
 
@@ -56,11 +65,13 @@ func main() {
     }
 
     // Create common worker config.
-    c := crawl.Config{}
-    c.Exclusions = ex
-    c.QuietMode = quietMode
-    c.RedirectCount = redirectCount
-    c.UserAgent = userAgent
+    c := crawl.Config{
+        Exclusions: ex,
+        QuietMode: quietMode,
+        RedirectCount: redirectCount,
+        UserAgent: userAgent,
+        VerboseMode: verboseMode,
+    }
 
     // Keep track of results.
     results := types.NewResultSet(*base, ex)
@@ -82,7 +93,7 @@ func main() {
     if c.QuietMode == false {
         fmt.Printf("Starting crawl with %d workers ...\n", workers)
     }
-    todos <- base.String()
+    found <- []string{base.Path}
 
     // Routine to process found URLs.
     go func() {
