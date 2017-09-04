@@ -20,6 +20,7 @@ type Result struct {
 type ResultSet struct {
     base url.URL
     set map[string][]Result
+    errorSet map[string]string
     m sync.RWMutex
     ex robots.Exclusion
 }
@@ -70,6 +71,16 @@ func (rs ResultSet) Add(link string) (bool, string) {
     return found, fmt.Sprintf("%s://%s%s", resolved.Scheme, resolved.Host, resolved.Path)
 }
 
+// AddError adds a new 4xx or 5xx result to the set.
+func (rs ResultSet) AddError(link string, status string) {
+    // Utilize RWLock for safe map access.
+    rs.m.Lock()
+    defer rs.m.Unlock()
+
+    // Add the link to the ResultSet.
+    rs.errorSet[link] = status
+}
+
 // String returns a string representation of the ResultSet.
 func (rs ResultSet) String() string {
     rs.m.Lock()
@@ -78,7 +89,10 @@ func (rs ResultSet) String() string {
     // Iterate over ResultSet and build string representation.
     var out string
     for link := range rs.set {
-        out = fmt.Sprintf("%s\n%s", out, link)
+        out += fmt.Sprintf("%s\n", link)
+    }
+    for link := range rs.errorSet {
+        out += fmt.Sprintf("%s %s\n", link, rs.errorSet[link])
     }
     return out
 }

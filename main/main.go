@@ -68,13 +68,14 @@ func main() {
     // Create channels.
     todos := make(chan string, 1000)
     found := make(chan []string, workers)
+    badURLs := make(chan [2]string, workers)
 
     // Keep track of Worker status.
     wg := sync.WaitGroup{}
 
     // Create crawl Workers.
     for i := 1; i <= workers; i++ {
-        go crawl.Worker(i, c, todos, found, &wg)
+        go crawl.Worker(i, c, todos, found, badURLs, &wg)
     }
 
     // Start crawl with base URL.
@@ -93,6 +94,15 @@ func main() {
                     todos <- crawlURL
                 }
             }
+            wg.Done()
+        }
+    }()
+
+    // Routine to process error URLs.
+    go func() {
+        for bad := range badURLs {
+            wg.Add(1)
+            results.AddError(bad[0], bad[1])
             wg.Done()
         }
     }()

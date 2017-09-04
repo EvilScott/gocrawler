@@ -91,7 +91,7 @@ func GrabLinks(body io.Reader) []string {
 }
 
 // Worker grabs URLs from a given channel and crawls them for links.
-func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sync.WaitGroup) {
+func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURLs chan<- [2]string, wg *sync.WaitGroup) {
     // Create reuseable HTTP client.
     client := &http.Client{}
 
@@ -135,6 +135,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, wg *sy
         // Handle non 2xx/3xx responses.
         if resp.StatusCode >= 400 {
             fmt.Fprintf(os.Stderr, "%s :: %s", target, resp.Status)
+            badURLs <- [2]string{target, resp.Status}
         }
 
         // Grab links and send them to the found channel for processing.
