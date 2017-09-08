@@ -3,7 +3,6 @@ package types
 import (
     "fmt"
     "net/url"
-    "sync"
 
     "github.com/evilscott/gocrawler/robots"
 )
@@ -29,7 +28,6 @@ type ResultSet struct {
     base url.URL
     set map[string][]Result
     errorSet map[string]string
-    m sync.RWMutex
     ex robots.Exclusion
 }
 
@@ -38,7 +36,6 @@ func NewResultSet(base url.URL, ex robots.Exclusion) ResultSet {
     return ResultSet{
         base: base,
         set: make(map[string][]Result),
-        m: sync.RWMutex{},
         ex: ex,
     }
 }
@@ -46,10 +43,6 @@ func NewResultSet(base url.URL, ex robots.Exclusion) ResultSet {
 // Add adds a new link to the ResultSet and returns if it should be crawled, the reason for exclusion (if applicable),
 // and the full URL.
 func (rs ResultSet) Add(link string) (shouldCrawl bool, reason, crawlURL string) {
-    // Utilize RWLock for safe map access.
-    rs.m.Lock()
-    defer rs.m.Unlock()
-
     // Parse the new link and resolve it against the base URL.
     parsed, err := url.Parse(string(link))
     if err != nil {
@@ -94,19 +87,12 @@ func (rs ResultSet) Add(link string) (shouldCrawl bool, reason, crawlURL string)
 
 // AddError adds a new 4xx or 5xx result to the set.
 func (rs ResultSet) AddError(link string, status string) {
-    // Utilize RWLock for safe map access.
-    rs.m.Lock()
-    defer rs.m.Unlock()
-
     // Add the link to the ResultSet.
     rs.errorSet[link] = status
 }
 
 // String returns a string representation of the ResultSet.
 func (rs ResultSet) String() string {
-    rs.m.Lock()
-    defer rs.m.Unlock()
-
     // Iterate over ResultSet and build string representation.
     var out string
     for link := range rs.set {
