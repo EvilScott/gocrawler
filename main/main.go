@@ -79,8 +79,8 @@ func main() {
 
     // Create channels.
     todos := make(chan string, 1000)
-    found := make(chan []string, workers)
-    badURLs := make(chan [2]string, workers)
+    found := make(chan []string)
+    badURLs := make(chan [2]string)
 
     // Keep track of Worker status.
     wg := sync.WaitGroup{}
@@ -89,12 +89,6 @@ func main() {
     for i := 1; i <= workers; i++ {
         go crawl.Worker(i, c, todos, found, badURLs, &wg)
     }
-
-    // Start crawl with base URL.
-    if c.QuietMode == false {
-        fmt.Printf("Starting crawl with %d workers ...\n", workers)
-    }
-    found <- []string{base.Path}
 
     // Routine to process found URLs.
     go func() {
@@ -113,10 +107,11 @@ func main() {
                 }
             }
             if c.VerboseMode == true {
-                fmt.Printf("%d links processed; %d new links to crawl\n", len(links), todoCount)
+                fmt.Printf("%d links processed; %d new links to crawl", len(links), todoCount)
                 for r, c := range reasons {
-                    fmt.Printf("%s %d\n", r, c)
+                    fmt.Printf("; excluded %d %s", c, r)
                 }
+                fmt.Println()
             }
             wg.Done()
         }
@@ -130,6 +125,12 @@ func main() {
             wg.Done()
         }
     }()
+
+    // Start crawl with base URL.
+    if c.QuietMode == false {
+        fmt.Printf("Starting crawl with %d workers ...\n", workers)
+    }
+    found <- []string{base.Path}
 
     // Wait for all workers to finish.
     time.Sleep(time.Second * 5)
