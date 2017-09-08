@@ -7,7 +7,6 @@ import (
     "net/url"
     "os"
     "sync"
-    "time"
 
     "github.com/evilscott/gocrawler/crawl"
     "github.com/evilscott/gocrawler/robots"
@@ -95,23 +94,24 @@ func main() {
         var todoCount int
         for links := range found {
             reasons := make(map[string]int)
-            wg.Add(1)
             todoCount = 0
             for _, link := range links {
                 shouldCrawl, reason, crawlURL := results.Add(link)
                 if shouldCrawl {
                     todoCount++
+                    wg.Add(1)
                     todos <- crawlURL
                 } else {
                     reasons[reason]++
                 }
             }
             if c.VerboseMode == true {
-                fmt.Printf("%d links processed; %d new links to crawl", len(links), todoCount)
+                outputString := ""
+                outputString = fmt.Sprintf("%d links processed; %d new links to crawl", len(links), todoCount)
                 for r, c := range reasons {
-                    fmt.Printf("; excluded %d %s", c, r)
+                    outputString += fmt.Sprintf("; excluded %d %s", c, r)
                 }
-                fmt.Println()
+                fmt.Println(outputString)
             }
             wg.Done()
         }
@@ -120,7 +120,6 @@ func main() {
     // Routine to process error URLs.
     go func() {
         for bad := range badURLs {
-            wg.Add(1)
             results.AddError(bad[0], bad[1])
             wg.Done()
         }
@@ -130,10 +129,10 @@ func main() {
     if c.QuietMode == false {
         fmt.Printf("Starting crawl with %d workers ...\n", workers)
     }
+    wg.Add(1)
     found <- []string{base.Path}
 
     // Wait for all workers to finish.
-    time.Sleep(time.Second * 5)
     wg.Wait()
     if c.QuietMode == false {
         fmt.Println("Finished! Links found:")

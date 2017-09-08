@@ -106,9 +106,6 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
 
     // Listen to todos channel.
     for target := range todos {
-        // Notify WaitGroup that Worker is busy.
-        wg.Add(1)
-
         // Create request for target URL.
         req, err := http.NewRequest("GET", target, nil)
         if err != nil {
@@ -139,6 +136,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
         // Handle non 2xx/3xx responses.
         if resp.StatusCode >= 400 {
             fmt.Fprintf(os.Stderr, "%s :: %s", target, resp.Status)
+            wg.Add(1)
             badURLs <- [2]string{target, resp.Status}
         }
 
@@ -147,6 +145,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
         if c.VerboseMode == true {
             fmt.Printf("Crawler #%d %s :: %d links found\n", id, target, len(links))
         }
+        wg.Add(1)
         found <- links
 
         // Throttle requests if specified by config.
