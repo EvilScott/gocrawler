@@ -63,6 +63,7 @@ func main() {
     if crawlDelay > ex.CrawlDelay {
         ex.CrawlDelay = crawlDelay
     }
+    ex.VerboseMode = verboseMode
 
     // Create common worker config.
     c := crawl.Config{
@@ -97,12 +98,24 @@ func main() {
 
     // Routine to process found URLs.
     go func() {
+        var todoCount int
         for links := range found {
+            reasons := make(map[string]int)
             wg.Add(1)
+            todoCount = 0
             for _, link := range links {
-                shouldCrawl, crawlURL := results.Add(link)
+                shouldCrawl, reason, crawlURL := results.Add(link)
                 if shouldCrawl {
+                    todoCount++
                     todos <- crawlURL
+                } else {
+                    reasons[reason]++
+                }
+            }
+            if c.VerboseMode == true {
+                fmt.Printf("%d links processed; %d new links to crawl\n", len(links), todoCount)
+                for r, c := range reasons {
+                    fmt.Printf("%s %d\n", r, c)
                 }
             }
             wg.Done()

@@ -123,7 +123,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
 
         // Send the request.
         if c.QuietMode == false {
-            fmt.Printf("Crawler #%d %s\n", id, target)
+            fmt.Printf("Crawler #%d %s :: crawling ...\n", id, target)
         }
         resp, err := client.Do(req)
         if err != nil {
@@ -143,7 +143,11 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
         }
 
         // Grab links and send them to the found channel for processing.
-        found <- GrabLinks(resp.Body)
+        links := GrabLinks(resp.Body)
+        if c.VerboseMode == true {
+            fmt.Printf("Crawler #%d %s :: %d links found\n", id, target, len(links))
+        }
+        found <- links
 
         // Throttle requests if specified by config.
         time.Sleep(time.Second * time.Duration(c.Exclusions.CrawlDelay))

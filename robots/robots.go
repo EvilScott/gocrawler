@@ -14,6 +14,7 @@ type Exclusion struct {
     Allow []string
     Disallow []string
     CrawlDelay int
+    VerboseMode bool
 }
 
 // parseSection parses a single section of robots.txt for use in Parse.
@@ -47,6 +48,7 @@ func parseSection(section string) Exclusion {
         Allow: allow,
         Disallow: disallow,
         CrawlDelay: int(crawlDelay),
+        VerboseMode: false,
     }
 }
 
@@ -111,6 +113,9 @@ func (e Exclusion) Allowed(url string) bool {
     }
     for _, disallow := range e.Disallow {
         if strings.Index(url, disallow) == 0 || disallow == "*" {
+            if e.VerboseMode {
+                fmt.Printf("Explicitly disallowed %s via %s\n", url, disallow)
+            }
             return false
         }
     }
