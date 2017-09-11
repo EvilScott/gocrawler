@@ -1,14 +1,14 @@
 package crawl
 
 import (
-    "strings"
-    "testing"
+	"strings"
+	"testing"
 
-    "github.com/evilscott/gocrawler/util"
+	"github.com/evilscott/gocrawler/util"
 )
 
 func TestGrabLinks(t *testing.T) {
-    html := `
+	html := `
     <html>
     <head>
         <link href="/no" />
@@ -23,13 +23,13 @@ func TestGrabLinks(t *testing.T) {
     </body>
     </html>
     `
-    body := strings.NewReader(html)
-    expected := []string{"/yes", "#", "/"}
-    util.AssertEqualSlice(t, expected, GrabLinks(body), "GrabLinks")
+	body := strings.NewReader(html)
+	expected := []string{"/yes", "#", "/"}
+	util.AssertEqualSlice(t, expected, GrabLinks(body), "GrabLinks")
 }
 
 func TestGrabLinksMeta(t *testing.T) {
-    html := `
+	html := `
     <html>
     <head>
         <meta name="robots" contents="noindex, nofollow" />
@@ -41,6 +41,6 @@ func TestGrabLinksMeta(t *testing.T) {
     </body>
     </html>
     `
-    body := strings.NewReader(html)
-    util.AssertEqualSlice(t, []string{}, GrabLinks(body), "GrabLinksMeta")
+	body := strings.NewReader(html)
+	util.AssertEqualSlice(t, []string{}, GrabLinks(body), "GrabLinksMeta")
 }
