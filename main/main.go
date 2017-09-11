@@ -105,9 +105,8 @@ func main() {
                     reasons[reason]++
                 }
             }
-            if c.VerboseMode == true {
-                outputString := ""
-                outputString = fmt.Sprintf("%d links processed; %d new links to crawl", len(links), todoCount)
+            if c.VerboseMode {
+                outputString := fmt.Sprintf("%d links processed; %d new links to crawl", len(links), todoCount)
                 for r, c := range reasons {
                     outputString += fmt.Sprintf("; excluded %d %s", c, r)
                 }
@@ -126,7 +125,7 @@ func main() {
     }()
 
     // Start crawl with base URL.
-    if c.QuietMode == false {
+    if !c.QuietMode {
         fmt.Printf("Starting crawl with %d workers ...\n", workers)
     }
     wg.Add(1)
@@ -134,7 +133,7 @@ func main() {
 
     // Wait for all workers to finish.
     wg.Wait()
-    if c.QuietMode == false {
+    if !c.QuietMode {
         fmt.Println("Finished! Links found:")
     }
     fmt.Println(results.String())

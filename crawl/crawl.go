@@ -44,7 +44,7 @@ func GrabLinks(body io.Reader) []string {
         tag, attr := z.TagName()
         switch {
         // Skip crawling pages with meta robots.
-        case attr == true && string(tag) == "meta":
+        case attr && string(tag) == "meta":
             var metaName, metaContent string
             walk := true
             for walk {
@@ -67,7 +67,7 @@ func GrabLinks(body io.Reader) []string {
                 }
             }
         // Record all links.
-        case attr == true && string(tag) == "a":
+        case attr && string(tag) == "a":
             walk := true
             for walk {
                 var link string
@@ -129,7 +129,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
             wg.Done()
             continue
         }
-        if c.VerboseMode == true {
+        if c.VerboseMode {
             fmt.Printf("Crawler #%d %s :: %s\n", id, target, resp.Status)
         }
 
@@ -142,7 +142,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
 
         // Grab links and send them to the found channel for processing.
         links := GrabLinks(resp.Body)
-        if c.VerboseMode == true {
+        if c.VerboseMode {
             fmt.Printf("Crawler #%d %s :: %d links found\n", id, target, len(links))
         }
         wg.Add(1)
