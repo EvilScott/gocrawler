@@ -30,6 +30,10 @@ func main() {
 	var redirectCount int
 	flag.IntVar(&redirectCount, "r", 10, "redirect count")
 
+	// Take todos chan buffer size from args.
+	var bufferSize int
+	flag.IntVar(&bufferSize, "b", 100, "buffer size")
+
 	// Take QuietMode from args.
 	var quietMode bool
 	flag.BoolVar(&quietMode, "q", false, "quiet mode")
@@ -66,6 +70,7 @@ func main() {
 
 	// Create common worker config.
 	c := crawl.Config{
+		BufferSize:    bufferSize,
 		Exclusions:    ex,
 		QuietMode:     quietMode,
 		RedirectCount: redirectCount,
@@ -77,7 +82,7 @@ func main() {
 	results := types.NewResultSet(*base, ex)
 
 	// Create channels.
-	todos := make(chan string, 1000)
+	todos := make(chan string, c.BufferSize)
 	found := make(chan []string)
 	badURLs := make(chan [2]string)
 

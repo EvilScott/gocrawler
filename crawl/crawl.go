@@ -18,6 +18,7 @@ import (
 
 // Config keeps track of pertinent settings for the crawler.
 type Config struct {
+	BufferSize    int
 	Exclusions    robots.Exclusion
 	QuietMode     bool
 	RedirectCount int
