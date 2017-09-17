@@ -125,8 +125,13 @@ func (rs ResultSet) AddResponse(resp ResponseData) {
 func (rs ResultSet) String() string {
 	// Iterate over ResultSet and build string representation.
 	var out string
-	for link := range rs.set {
-		out += fmt.Sprintf("%s\n", link)
+	for link, resp := range rs.responseSet {
+		out += fmt.Sprintf("%s %d (%dms)\n", link, resp.Code, resp.Time)
+	}
+	for link, results := range rs.set {
+		if results[0].external {
+			out += fmt.Sprintf("%s\n", link)
+		}
 	}
 	for link := range rs.errorSet {
 		out += fmt.Sprintf("%s %s\n", link, rs.errorSet[link])
