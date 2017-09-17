@@ -15,6 +15,31 @@ const (
 	EXTERNAL     = "external"
 )
 
+// Config keeps track of pertinent settings for the crawler.
+type Config struct {
+	BufferSize    int
+	Exclusions    robots.Exclusion
+	QuietMode     bool
+	RedirectCount int
+	UserAgent     string
+	VerboseMode   bool
+}
+
+// URLData keeps track of extra data associated with URLs.
+type ResponseData struct {
+	URL    string
+	Status string
+	Code   int
+	Time   int
+}
+
+// ChannelGroup keeps track of all the channels a crawl routine needs.
+type ChannelGroup struct {
+	TODOs     chan string
+	Found     chan []string
+	Responses chan ResponseData
+}
+
 // Result handles info for a given link found during the crawl.
 type Result struct {
 	external       bool
@@ -25,18 +50,21 @@ type Result struct {
 
 // ResultSet keeps track of found links during the crawl and associated data.
 type ResultSet struct {
-	base     url.URL
-	set      map[string][]Result
-	errorSet map[string]string
-	ex       robots.Exclusion
+	base        url.URL
+	set         map[string][]Result
+	responseSet map[string]ResponseData
+	errorSet    map[string]string
+	ex          robots.Exclusion
 }
 
 // NewResultSet creates a new ResultSet struct.
 func NewResultSet(base url.URL, ex robots.Exclusion) ResultSet {
 	return ResultSet{
-		base: base,
-		set:  make(map[string][]Result),
-		ex:   ex,
+		base:        base,
+		set:         make(map[string][]Result),
+		responseSet: make(map[string]ResponseData),
+		errorSet:    make(map[string]string),
+		ex:          ex,
 	}
 }
 
@@ -85,10 +113,12 @@ func (rs ResultSet) Add(link string) (shouldCrawl bool, reason, crawlURL string)
 	return shouldCrawl, reason, fmt.Sprintf("%s://%s%s", resolved.Scheme, resolved.Host, resolved.Path)
 }
 
-// AddError adds a new 4xx or 5xx result to the set.
-func (rs ResultSet) AddError(link string, status string) {
-	// Add the link to the ResultSet.
-	rs.errorSet[link] = status
+// AddResponse adds the response (and error if appropriate) to the ResultSet.
+func (rs ResultSet) AddResponse(resp ResponseData) {
+	rs.responseSet[resp.URL] = resp
+	if resp.Code >= 400 {
+		rs.errorSet[resp.URL] = resp.Status
+	}
 }
 
 // String returns a string representation of the ResultSet.

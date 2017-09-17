@@ -69,7 +69,7 @@ func main() {
 	ex.VerboseMode = verboseMode
 
 	// Create common worker config.
-	c := crawl.Config{
+	c := types.Config{
 		BufferSize:    bufferSize,
 		Exclusions:    ex,
 		QuietMode:     quietMode,
@@ -81,23 +81,25 @@ func main() {
 	// Keep track of results.
 	results := types.NewResultSet(*base, ex)
 
-	// Create channels.
-	todos := make(chan string, c.BufferSize)
-	found := make(chan []string)
-	badURLs := make(chan [2]string)
+	// Create channels group.
+	chans := types.ChannelGroup{
+		TODOs:     make(chan string, c.BufferSize),
+		Found:     make(chan []string),
+		Responses: make(chan types.ResponseData),
+	}
 
 	// Keep track of Worker status.
 	wg := sync.WaitGroup{}
 
 	// Create crawl Workers.
 	for i := 1; i <= workers; i++ {
-		go crawl.Worker(i, c, todos, found, badURLs, &wg)
+		go crawl.Worker(i, c, chans, &wg)
 	}
 
 	// Routine to process found URLs.
 	go func() {
 		var todoCount int
-		for links := range found {
+		for links := range chans.Found {
 			reasons := make(map[string]int)
 			todoCount = 0
 			for _, link := range links {
@@ -105,7 +107,7 @@ func main() {
 				if shouldCrawl {
 					todoCount++
 					wg.Add(1)
-					todos <- crawlURL
+					chans.TODOs <- crawlURL
 				} else {
 					reasons[reason]++
 				}
@@ -121,10 +123,10 @@ func main() {
 		}
 	}()
 
-	// Routine to process error URLs.
+	// Routine to process response data.
 	go func() {
-		for bad := range badURLs {
-			results.AddError(bad[0], bad[1])
+		for respData := range chans.Responses {
+			results.AddResponse(respData)
 			wg.Done()
 		}
 	}()
@@ -134,7 +136,7 @@ func main() {
 		fmt.Printf("Starting crawl with %d workers ...\n", workers)
 	}
 	wg.Add(1)
-	found <- []string{base.Path}
+	chans.Found <- []string{base.Path}
 
 	// Wait for all workers to finish.
 	wg.Wait()

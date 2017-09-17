@@ -11,20 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/evilscott/gocrawler/robots"
+	"github.com/evilscott/gocrawler/types"
 
 	"golang.org/x/net/html"
 )
-
-// Config keeps track of pertinent settings for the crawler.
-type Config struct {
-	BufferSize    int
-	Exclusions    robots.Exclusion
-	QuietMode     bool
-	RedirectCount int
-	UserAgent     string
-	VerboseMode   bool
-}
 
 // GrabLinks returns a slice of found links.
 func GrabLinks(body io.Reader) []string {
@@ -93,7 +83,7 @@ func GrabLinks(body io.Reader) []string {
 }
 
 // Worker grabs URLs from a given channel and crawls them for links.
-func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURLs chan<- [2]string, wg *sync.WaitGroup) {
+func Worker(id int, c types.Config, chans types.ChannelGroup, wg *sync.WaitGroup) {
 	// Create reuseable HTTP client.
 	client := &http.Client{}
 
@@ -106,7 +96,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
 	}
 
 	// Listen to todos channel.
-	for target := range todos {
+	for target := range chans.TODOs {
 		// Create request for target URL.
 		req, err := http.NewRequest("GET", target, nil)
 		if err != nil {
@@ -123,7 +113,9 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
 		if c.QuietMode == false {
 			fmt.Printf("Crawler #%d %s :: crawling ...\n", id, target)
 		}
+		start := time.Now()
 		resp, err := client.Do(req)
+		dur := int(time.Now().Sub(start) / time.Millisecond)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			time.Sleep(time.Second * time.Duration(c.Exclusions.CrawlDelay))
@@ -131,14 +123,21 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
 			continue
 		}
 		if c.VerboseMode {
-			fmt.Printf("Crawler #%d %s :: %s\n", id, target, resp.Status)
+			fmt.Printf("Crawler #%d %s :: %s (%dms)\n", id, target, resp.Status, dur)
 		}
 
-		// Handle non 2xx/3xx responses.
+		// Log non 2xx/3xx responses.
 		if resp.StatusCode >= 400 {
 			fmt.Fprintf(os.Stderr, "%s :: %s", target, resp.Status)
-			wg.Add(1)
-			badURLs <- [2]string{target, resp.Status}
+		}
+
+		// Record extra data for responses.
+		wg.Add(1)
+		chans.Responses <- types.ResponseData{
+			URL:    target,
+			Status: resp.Status,
+			Code:   resp.StatusCode,
+			Time:   dur,
 		}
 
 		// Grab links and send them to the found channel for processing.
@@ -147,7 +146,7 @@ func Worker(id int, c Config, todos <-chan string, found chan<- []string, badURL
 			fmt.Printf("Crawler #%d %s :: %d links found\n", id, target, len(links))
 		}
 		wg.Add(1)
-		found <- links
+		chans.Found <- links
 
 		// Throttle requests if specified by config.
 		time.Sleep(time.Second * time.Duration(c.Exclusions.CrawlDelay))
